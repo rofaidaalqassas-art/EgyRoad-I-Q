@@ -1,0 +1,657 @@
+[
+  {
+    "Road_Name": "Kharga-Dakhla Highway",
+    "risk_score": 59.5,
+    "accidents": 104,
+    "fatalities": 157,
+    "injuries": 1546,
+    "governorates": [
+      "New Valley"
+    ],
+    "components": {
+      "severity": 69.1,
+      "frequency": 0.0,
+      "speeding": 50.0,
+      "night_unlit": 87.7,
+      "poor_surface": 100.0,
+      "no_camera": 100.0,
+      "black_spot": 49.0
+    }
+  },
+  {
+    "Road_Name": "Hurghada-Marsa Alam Highway",
+    "risk_score": 58.1,
+    "accidents": 448,
+    "fatalities": 754,
+    "injuries": 6693,
+    "governorates": [
+      "Red Sea"
+    ],
+    "components": {
+      "severity": 71.0,
+      "frequency": 7.7,
+      "speeding": 50.0,
+      "night_unlit": 100.0,
+      "poor_surface": 44.8,
+      "no_camera": 100.0,
+      "black_spot": 65.6
+    }
+  },
+  {
+    "Road_Name": "Regional Ring Road",
+    "risk_score": 54.8,
+    "accidents": 456,
+    "fatalities": 2160,
+    "injuries": 1852,
+    "governorates": [
+      "Cairo"
+    ],
+    "components": {
+      "severity": 94.1,
+      "frequency": 6.9,
+      "speeding": 50.0,
+      "night_unlit": 27.9,
+      "poor_surface": 32.6,
+      "no_camera": 67.0,
+      "black_spot": 100.0
+    }
+  },
+  {
+    "Road_Name": "Ismailia-Port Said Highway",
+    "risk_score": 53.9,
+    "accidents": 177,
+    "fatalities": 660,
+    "injuries": 1718,
+    "governorates": [
+      "Ismailia",
+      "Port Said"
+    ],
+    "components": {
+      "severity": 92.3,
+      "frequency": 1.1,
+      "speeding": 50.0,
+      "night_unlit": 30.5,
+      "poor_surface": 53.1,
+      "no_camera": 78.8,
+      "black_spot": 45.2
+    }
+  },
+  {
+    "Road_Name": "Western Desert Highway",
+    "risk_score": 52.1,
+    "accidents": 339,
+    "fatalities": 699,
+    "injuries": 4356,
+    "governorates": [
+      "Giza",
+      "New Valley"
+    ],
+    "components": {
+      "severity": 72.2,
+      "frequency": 4.3,
+      "speeding": 50.0,
+      "night_unlit": 48.6,
+      "poor_surface": 49.5,
+      "no_camera": 72.3,
+      "black_spot": 100.0
+    }
+  },
+  {
+    "Road_Name": "Asyut-Kharga Highway",
+    "risk_score": 50.0,
+    "accidents": 471,
+    "fatalities": 380,
+    "injuries": 7048,
+    "governorates": [
+      "Asyut",
+      "New Valley"
+    ],
+    "components": {
+      "severity": 60.5,
+      "frequency": 4.1,
+      "speeding": 50.0,
+      "night_unlit": 75.2,
+      "poor_surface": 39.6,
+      "no_camera": 76.1,
+      "black_spot": 88.7
+    }
+  },
+  {
+    "Road_Name": "Suez Canal Corridor",
+    "risk_score": 48.9,
+    "accidents": 125,
+    "fatalities": 347,
+    "injuries": 1448,
+    "governorates": [
+      "North Sinai",
+      "Ismailia"
+    ],
+    "components": {
+      "severity": 83.9,
+      "frequency": 2.1,
+      "speeding": 50.0,
+      "night_unlit": 15.0,
+      "poor_surface": 43.3,
+      "no_camera": 100.0,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Autostrad Expressway",
+    "risk_score": 47.5,
+    "accidents": 197,
+    "fatalities": 994,
+    "injuries": 718,
+    "governorates": [
+      "Cairo"
+    ],
+    "components": {
+      "severity": 100.0,
+      "frequency": 1.7,
+      "speeding": 50.0,
+      "night_unlit": 22.4,
+      "poor_surface": 31.9,
+      "no_camera": 42.7,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Cairo-Alexandria Desert Road",
+    "risk_score": 46.8,
+    "accidents": 904,
+    "fatalities": 1823,
+    "injuries": 11046,
+    "governorates": [
+      "Giza",
+      "Alexandria"
+    ],
+    "components": {
+      "severity": 68.9,
+      "frequency": 25.8,
+      "speeding": 50.0,
+      "night_unlit": 36.8,
+      "poor_surface": 29.2,
+      "no_camera": 68.8,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Cairo Ring Road",
+    "risk_score": 46.4,
+    "accidents": 535,
+    "fatalities": 2041,
+    "injuries": 4416,
+    "governorates": [
+      "Cairo",
+      "Giza"
+    ],
+    "components": {
+      "severity": 89.8,
+      "frequency": 16.8,
+      "speeding": 50.0,
+      "night_unlit": 24.8,
+      "poor_surface": 35.1,
+      "no_camera": 26.2,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Matrouh-Siwa Desert Road",
+    "risk_score": 45.4,
+    "accidents": 407,
+    "fatalities": 345,
+    "injuries": 6089,
+    "governorates": [
+      "Matrouh"
+    ],
+    "components": {
+      "severity": 61.3,
+      "frequency": 7.9,
+      "speeding": 50.0,
+      "night_unlit": 41.0,
+      "poor_surface": 52.5,
+      "no_camera": 86.1,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Galala Highway",
+    "risk_score": 44.2,
+    "accidents": 489,
+    "fatalities": 725,
+    "injuries": 7276,
+    "governorates": [
+      "Red Sea",
+      "South Sinai",
+      "Suez"
+    ],
+    "components": {
+      "severity": 68.9,
+      "frequency": 7.3,
+      "speeding": 50.0,
+      "night_unlit": 24.5,
+      "poor_surface": 18.2,
+      "no_camera": 88.5,
+      "black_spot": 28.8
+    }
+  },
+  {
+    "Road_Name": "Upper Egypt Western Desert Road",
+    "risk_score": 44.0,
+    "accidents": 1116,
+    "fatalities": 939,
+    "injuries": 13040,
+    "governorates": [
+      "Asyut",
+      "Aswan",
+      "Beni Suef"
+    ],
+    "components": {
+      "severity": 46.1,
+      "frequency": 17.7,
+      "speeding": 50.0,
+      "night_unlit": 63.4,
+      "poor_surface": 40.5,
+      "no_camera": 61.3,
+      "black_spot": 51.6
+    }
+  },
+  {
+    "Road_Name": "Delta Agricultural Arterial",
+    "risk_score": 42.3,
+    "accidents": 7882,
+    "fatalities": 2120,
+    "injuries": 53820,
+    "governorates": [
+      "Gharbiya",
+      "Sharkia",
+      "Dakahlia"
+    ],
+    "components": {
+      "severity": 9.9,
+      "frequency": 100.0,
+      "speeding": 50.0,
+      "night_unlit": 32.5,
+      "poor_surface": 28.2,
+      "no_camera": 47.3,
+      "black_spot": 20.7
+    }
+  },
+  {
+    "Road_Name": "Kafr El Sheikh-Tanta Highway",
+    "risk_score": 42.3,
+    "accidents": 599,
+    "fatalities": 103,
+    "injuries": 8514,
+    "governorates": [
+      "Kafr El Sheikh"
+    ],
+    "components": {
+      "severity": 50.0,
+      "frequency": 7.3,
+      "speeding": 50.0,
+      "night_unlit": 23.4,
+      "poor_surface": 40.7,
+      "no_camera": 68.6,
+      "black_spot": 100.0
+    }
+  },
+  {
+    "Road_Name": "Upper Egypt Eastern Desert Road",
+    "risk_score": 42.3,
+    "accidents": 3180,
+    "fatalities": 3303,
+    "injuries": 32637,
+    "governorates": [
+      "Qena",
+      "Minya",
+      "Beni Suef",
+      "Sohag",
+      "Asyut",
+      "Aswan",
+      "Luxor"
+    ],
+    "components": {
+      "severity": 44.7,
+      "frequency": 40.0,
+      "speeding": 50.0,
+      "night_unlit": 30.0,
+      "poor_surface": 34.7,
+      "no_camera": 59.8,
+      "black_spot": 17.8
+    }
+  },
+  {
+    "Road_Name": "Alexandria Ring Road",
+    "risk_score": 41.7,
+    "accidents": 373,
+    "fatalities": 771,
+    "injuries": 4313,
+    "governorates": [
+      "Alexandria"
+    ],
+    "components": {
+      "severity": 62.9,
+      "frequency": 14.9,
+      "speeding": 50.0,
+      "night_unlit": 39.4,
+      "poor_surface": 39.3,
+      "no_camera": 44.6,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Coastal International Highway",
+    "risk_score": 41.6,
+    "accidents": 4114,
+    "fatalities": 2321,
+    "injuries": 51019,
+    "governorates": [
+      "Dakahlia",
+      "Kafr El Sheikh",
+      "Damietta",
+      "Alexandria",
+      "Matrouh",
+      "Port Said"
+    ],
+    "components": {
+      "severity": 44.7,
+      "frequency": 43.9,
+      "speeding": 50.0,
+      "night_unlit": 25.0,
+      "poor_surface": 26.6,
+      "no_camera": 61.6,
+      "black_spot": 12.4
+    }
+  },
+  {
+    "Road_Name": "Arish-Kantara Highway",
+    "risk_score": 41.3,
+    "accidents": 146,
+    "fatalities": 83,
+    "injuries": 2165,
+    "governorates": [
+      "North Sinai"
+    ],
+    "components": {
+      "severity": 58.7,
+      "frequency": 0.3,
+      "speeding": 50.0,
+      "night_unlit": 34.3,
+      "poor_surface": 27.0,
+      "no_camera": 100.0,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Suez-Hurghada Coastal Road",
+    "risk_score": 40.7,
+    "accidents": 259,
+    "fatalities": 425,
+    "injuries": 3692,
+    "governorates": [
+      "Suez"
+    ],
+    "components": {
+      "severity": 66.7,
+      "frequency": 7.5,
+      "speeding": 50.0,
+      "night_unlit": 0.0,
+      "poor_surface": 31.5,
+      "no_camera": 85.5,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Damietta-Ras El Bar Road",
+    "risk_score": 40.3,
+    "accidents": 1125,
+    "fatalities": 691,
+    "injuries": 16718,
+    "governorates": [
+      "Damietta"
+    ],
+    "components": {
+      "severity": 57.5,
+      "frequency": 15.0,
+      "speeding": 50.0,
+      "night_unlit": 16.5,
+      "poor_surface": 9.0,
+      "no_camera": 76.6,
+      "black_spot": 47.3
+    }
+  },
+  {
+    "Road_Name": "Mansoura-Tanta Regional Road",
+    "risk_score": 38.0,
+    "accidents": 1664,
+    "fatalities": 548,
+    "injuries": 16588,
+    "governorates": [
+      "Dakahlia"
+    ],
+    "components": {
+      "severity": 27.5,
+      "frequency": 54.3,
+      "speeding": 50.0,
+      "night_unlit": 29.3,
+      "poor_surface": 32.2,
+      "no_camera": 52.5,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Nile Valley Agriculture Road",
+    "risk_score": 37.4,
+    "accidents": 995,
+    "fatalities": 834,
+    "injuries": 10231,
+    "governorates": [
+      "Sohag",
+      "Qena",
+      "Beni Suef"
+    ],
+    "components": {
+      "severity": 40.4,
+      "frequency": 15.9,
+      "speeding": 50.0,
+      "night_unlit": 24.3,
+      "poor_surface": 33.2,
+      "no_camera": 60.3,
+      "black_spot": 56.4
+    }
+  },
+  {
+    "Road_Name": "30th of June Axis",
+    "risk_score": 35.3,
+    "accidents": 37,
+    "fatalities": 151,
+    "injuries": 0,
+    "governorates": [
+      "Port Said"
+    ],
+    "components": {
+      "severity": 74.1,
+      "frequency": 0.7,
+      "speeding": 50.0,
+      "night_unlit": 5.3,
+      "poor_surface": 0.0,
+      "no_camera": 49.2,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Wadi El Natrun Road",
+    "risk_score": 32.2,
+    "accidents": 2954,
+    "fatalities": 2006,
+    "injuries": 17267,
+    "governorates": [
+      "Beheira"
+    ],
+    "components": {
+      "severity": 16.5,
+      "frequency": 42.8,
+      "speeding": 50.0,
+      "night_unlit": 30.1,
+      "poor_surface": 32.5,
+      "no_camera": 49.1,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Cairo-Alexandria Agriculture Road",
+    "risk_score": 29.9,
+    "accidents": 2138,
+    "fatalities": 1566,
+    "injuries": 12936,
+    "governorates": [
+      "Beheira",
+      "Alexandria",
+      "Menoufia"
+    ],
+    "components": {
+      "severity": 16.2,
+      "frequency": 34.7,
+      "speeding": 50.0,
+      "night_unlit": 27.7,
+      "poor_surface": 32.1,
+      "no_camera": 46.4,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Tanta-Mahalla Regional Road",
+    "risk_score": 27.4,
+    "accidents": 2181,
+    "fatalities": 655,
+    "injuries": 10762,
+    "governorates": [
+      "Gharbiya"
+    ],
+    "components": {
+      "severity": 0.0,
+      "frequency": 30.8,
+      "speeding": 50.0,
+      "night_unlit": 27.9,
+      "poor_surface": 30.9,
+      "no_camera": 53.5,
+      "black_spot": 50.4
+    }
+  },
+  {
+    "Road_Name": "Cairo-Ismailia Desert Road",
+    "risk_score": 27.2,
+    "accidents": 2683,
+    "fatalities": 950,
+    "injuries": 15584,
+    "governorates": [
+      "Sharkia",
+      "Ismailia"
+    ],
+    "components": {
+      "severity": 6.6,
+      "frequency": 36.4,
+      "speeding": 50.0,
+      "night_unlit": 27.1,
+      "poor_surface": 31.0,
+      "no_camera": 46.0,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Faiyum Regional Ring Road",
+    "risk_score": 26.9,
+    "accidents": 187,
+    "fatalities": 194,
+    "injuries": 560,
+    "governorates": [
+      "Faiyum"
+    ],
+    "components": {
+      "severity": 10.3,
+      "frequency": 0.5,
+      "speeding": 50.0,
+      "night_unlit": 23.4,
+      "poor_surface": 28.4,
+      "no_camera": 59.8,
+      "black_spot": 100.0
+    }
+  },
+  {
+    "Road_Name": "Shubra-Banha Expressway",
+    "risk_score": 26.9,
+    "accidents": 1112,
+    "fatalities": 1296,
+    "injuries": 4708,
+    "governorates": [
+      "Qalyubia"
+    ],
+    "components": {
+      "severity": 17.0,
+      "frequency": 13.9,
+      "speeding": 50.0,
+      "night_unlit": 34.2,
+      "poor_surface": 27.9,
+      "no_camera": 39.1,
+      "black_spot": 27.7
+    }
+  },
+  {
+    "Road_Name": "Sadat City Highway",
+    "risk_score": 25.7,
+    "accidents": 2269,
+    "fatalities": 1293,
+    "injuries": 8557,
+    "governorates": [
+      "Menoufia"
+    ],
+    "components": {
+      "severity": 0.2,
+      "frequency": 35.3,
+      "speeding": 50.0,
+      "night_unlit": 33.7,
+      "poor_surface": 28.0,
+      "no_camera": 49.5,
+      "black_spot": 0.0
+    }
+  },
+  {
+    "Road_Name": "Cairo-Faiyum Desert Road",
+    "risk_score": 24.2,
+    "accidents": 561,
+    "fatalities": 515,
+    "injuries": 1628,
+    "governorates": [
+      "Faiyum"
+    ],
+    "components": {
+      "severity": 6.2,
+      "frequency": 8.9,
+      "speeding": 50.0,
+      "night_unlit": 28.4,
+      "poor_surface": 35.0,
+      "no_camera": 49.7,
+      "black_spot": 34.9
+    }
+  },
+  {
+    "Road_Name": "Luxor-Aswan Highway",
+    "risk_score": 22.2,
+    "accidents": 94,
+    "fatalities": 189,
+    "injuries": 488,
+    "governorates": [
+      "Luxor"
+    ],
+    "components": {
+      "severity": 42.0,
+      "frequency": 0.1,
+      "speeding": 50.0,
+      "night_unlit": 4.7,
+      "poor_surface": 16.0,
+      "no_camera": 0.0,
+      "black_spot": 0.0
+    }
+  }
+]

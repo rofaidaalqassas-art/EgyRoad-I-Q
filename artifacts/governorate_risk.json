@@ -1,0 +1,164 @@
+{
+  "Alexandria": {
+    "risk_score": 46.0,
+    "accidents": 1386,
+    "fatalities": 2608,
+    "injuries": 16167
+  },
+  "Aswan": {
+    "risk_score": 25.3,
+    "accidents": 479,
+    "fatalities": 762,
+    "injuries": 1239
+  },
+  "Asyut": {
+    "risk_score": 52.3,
+    "accidents": 1552,
+    "fatalities": 1142,
+    "injuries": 23258
+  },
+  "Beheira": {
+    "risk_score": 37.6,
+    "accidents": 3961,
+    "fatalities": 2588,
+    "injuries": 23303
+  },
+  "Beni Suef": {
+    "risk_score": 32.5,
+    "accidents": 844,
+    "fatalities": 777,
+    "injuries": 5494
+  },
+  "Cairo": {
+    "risk_score": 55.7,
+    "accidents": 907,
+    "fatalities": 4465,
+    "injuries": 3379
+  },
+  "Dakahlia": {
+    "risk_score": 49.5,
+    "accidents": 6553,
+    "fatalities": 2206,
+    "injuries": 64626
+  },
+  "Damietta": {
+    "risk_score": 44.4,
+    "accidents": 2229,
+    "fatalities": 1262,
+    "injuries": 33124
+  },
+  "Faiyum": {
+    "risk_score": 27.7,
+    "accidents": 748,
+    "fatalities": 709,
+    "injuries": 2188
+  },
+  "Gharbiya": {
+    "risk_score": 31.8,
+    "accidents": 4332,
+    "fatalities": 1217,
+    "injuries": 19885
+  },
+  "Giza": {
+    "risk_score": 51.4,
+    "accidents": 1139,
+    "fatalities": 2555,
+    "injuries": 14286
+  },
+  "Ismailia": {
+    "risk_score": 58.8,
+    "accidents": 324,
+    "fatalities": 1255,
+    "injuries": 3274
+  },
+  "Kafr El Sheikh": {
+    "risk_score": 45.8,
+    "accidents": 1197,
+    "fatalities": 270,
+    "injuries": 17008
+  },
+  "Luxor": {
+    "risk_score": 26.3,
+    "accidents": 128,
+    "fatalities": 277,
+    "injuries": 623
+  },
+  "Matrouh": {
+    "risk_score": 48.6,
+    "accidents": 799,
+    "fatalities": 641,
+    "injuries": 11941
+  },
+  "Menoufia": {
+    "risk_score": 28.7,
+    "accidents": 3053,
+    "fatalities": 1692,
+    "injuries": 11377
+  },
+  "Minya": {
+    "risk_score": 35.0,
+    "accidents": 944,
+    "fatalities": 1353,
+    "injuries": 6437
+  },
+  "New Valley": {
+    "risk_score": 61.3,
+    "accidents": 206,
+    "fatalities": 299,
+    "injuries": 3064
+  },
+  "North Sinai": {
+    "risk_score": 42.5,
+    "accidents": 189,
+    "fatalities": 98,
+    "injuries": 2796
+  },
+  "Port Said": {
+    "risk_score": 33.9,
+    "accidents": 70,
+    "fatalities": 273,
+    "injuries": 0
+  },
+  "Qalyubia": {
+    "risk_score": 28.6,
+    "accidents": 1112,
+    "fatalities": 1296,
+    "injuries": 4708
+  },
+  "Qena": {
+    "risk_score": 35.0,
+    "accidents": 493,
+    "fatalities": 503,
+    "injuries": 5179
+  },
+  "Red Sea": {
+    "risk_score": 59.7,
+    "accidents": 593,
+    "fatalities": 1000,
+    "injuries": 8861
+  },
+  "Sharkia": {
+    "risk_score": 35.0,
+    "accidents": 5117,
+    "fatalities": 1117,
+    "injuries": 27989
+  },
+  "Sohag": {
+    "risk_score": 46.6,
+    "accidents": 1363,
+    "fatalities": 769,
+    "injuries": 20427
+  },
+  "South Sinai": {
+    "risk_score": 42.0,
+    "accidents": 265,
+    "fatalities": 380,
+    "injuries": 3929
+  },
+  "Suez": {
+    "risk_score": 43.7,
+    "accidents": 338,
+    "fatalities": 524,
+    "injuries": 4871
+  }
+}
