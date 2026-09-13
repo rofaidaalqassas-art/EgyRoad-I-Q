@@ -1,1 +1,18 @@
-{}
+{
+  "INC-000001": {
+    "id": "INC-000001",
+    "governorate": "JGHG",
+    "road_name": "UI",
+    "description": "IUTYRTYT",
+    "image_path": "uploads\\a1419fab761a4686b57305f519053c98.png",
+    "reported_by": "test1@gmail.com",
+    "image_verification": {
+      "image_status": "needs_review",
+      "image_label": "🔎 Needs Review",
+      "image_confidence": 0.0,
+      "image_reason": "رد موديل فحص الصور لم يكن بصيغة JSON صالحة"
+    },
+    "status": "قيد المراجعة",
+    "created_at": "2026-09-13T15:27:50.900395+00:00"
+  }
+}

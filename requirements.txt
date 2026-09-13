@@ -6,3 +6,5 @@ scikit-learn
 openpyxl
 joblib
 python-multipart
+catboost
+xgboost

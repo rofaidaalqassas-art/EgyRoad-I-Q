@@ -1,642 +1,642 @@
 [
   {
-    "feature": "numeric__Latitude",
-    "importance": 0.10529691614229857
+    "feature": "Month",
+    "importance": 26.808751928952628
   },
   {
-    "feature": "numeric__Longitude",
-    "importance": 0.05577846191851735
+    "feature": "Year",
+    "importance": 22.937070097400408
   },
   {
-    "feature": "numeric__Year",
-    "importance": 0.043743549387830476
+    "feature": "Latitude",
+    "importance": 10.338079485425634
   },
   {
-    "feature": "categorical__Vehicle_Category_Pickup",
-    "importance": 0.03670958523532107
+    "feature": "Governorate_EN_Dakahlia",
+    "importance": 5.249035021292571
   },
   {
-    "feature": "categorical__Licensing_Status_Expired",
-    "importance": 0.028986522449959865
+    "feature": "Longitude",
+    "importance": 4.575590755191689
   },
   {
-    "feature": "categorical__Governorate_EN_Asyut",
-    "importance": 0.027704046306361564
+    "feature": "Governorate_EN_Sharkia",
+    "importance": 3.060427323670396
   },
   {
-    "feature": "numeric__Month",
-    "importance": 0.026673065127630693
+    "feature": "Governorate_EN_Gharbiya",
+    "importance": 3.0478574527839157
   },
   {
-    "feature": "numeric__AADT_Volume",
-    "importance": 0.025610435951455488
+    "feature": "Governorate_EN_Beheira",
+    "importance": 2.326143811151894
   },
   {
-    "feature": "categorical__Highway_Name_Coastal International Highway",
-    "importance": 0.024873702142683352
+    "feature": "Governorate_EN_Menoufia",
+    "importance": 2.1499564941963905
   },
   {
-    "feature": "numeric__KM_Marker",
-    "importance": 0.02433874110793925
+    "feature": "Governorate_EN_Damietta",
+    "importance": 2.024453243756129
   },
   {
-    "feature": "categorical__Licensing_Status_Valid",
-    "importance": 0.022091616830949356
+    "feature": "Governorate_EN_Giza",
+    "importance": 1.7085136044325822
   },
   {
-    "feature": "categorical__Governorate_EN_Sohag",
-    "importance": 0.020894668569725466
+    "feature": "AADT_Volume",
+    "importance": 0.9080209754218505
   },
   {
-    "feature": "categorical__Governorate_EN_Damietta",
-    "importance": 0.02030857466166596
+    "feature": "Governorate_EN_Kafr El Sheikh",
+    "importance": 0.7969988161354473
   },
   {
-    "feature": "categorical__Governorate_EN_Dakahlia",
-    "importance": 0.01887235348542205
+    "feature": "Monthly_Income_EGP",
+    "importance": 0.762356717750361
   },
   {
-    "feature": "categorical__Governorate_EN_Kafr El Sheikh",
-    "importance": 0.018193666599527043
+    "feature": "KM_Marker",
+    "importance": 0.6973181148784848
   },
   {
-    "feature": "categorical__Model_Punto",
-    "importance": 0.017744453141896214
+    "feature": "Driving_Experience_Years",
+    "importance": 0.5916644995141116
   },
   {
-    "feature": "numeric__Monthly_Income_EGP",
-    "importance": 0.016639091012334496
+    "feature": "Governorate_EN_Alexandria",
+    "importance": 0.5634572674645958
   },
   {
-    "feature": "numeric__Driving_Experience_Years",
-    "importance": 0.015299463484261948
+    "feature": "Age",
+    "importance": 0.5570918946941277
   },
   {
-    "feature": "categorical__Governorate_EN_Menoufia",
-    "importance": 0.014951373133062237
+    "feature": "Fatigue_Hours_Awake",
+    "importance": 0.5209883226050813
   },
   {
-    "feature": "categorical__Make_Fiat",
-    "importance": 0.014781975047704999
+    "feature": "Governorate_EN_Cairo",
+    "importance": 0.5112190330384185
   },
   {
-    "feature": "categorical__Governorate_EN_Gharbiya",
-    "importance": 0.014771258542933256
+    "feature": "Vehicle_Age_Years",
+    "importance": 0.45534887999498774
   },
   {
-    "feature": "numeric__Age",
-    "importance": 0.01475410939517277
+    "feature": "Vehicle_Category_Pickup",
+    "importance": 0.40042956204301805
   },
   {
-    "feature": "numeric__Vehicle_Age_Years",
-    "importance": 0.01218286148399069
+    "feature": "Highway_Name_Shubra-Banha Expressway",
+    "importance": 0.40003084482836965
   },
   {
-    "feature": "categorical__Insurance_Coverage_Comprehensive",
-    "importance": 0.011652446864904742
+    "feature": "Posted_Speed_Limit_KMH",
+    "importance": 0.36189864468069977
   },
   {
-    "feature": "categorical__Insurance_Coverage_Third-party",
-    "importance": 0.010813118297393868
+    "feature": "Governorate_EN_Minya",
+    "importance": 0.35891243999942934
   },
   {
-    "feature": "numeric__Fatigue_Hours_Awake",
-    "importance": 0.010693524854449386
+    "feature": "Governorate_EN_Faiyum",
+    "importance": 0.29996683495128496
   },
   {
-    "feature": "categorical__License_Category_Class D (Bus)",
-    "importance": 0.010367082868232645
+    "feature": "Day_of_Week",
+    "importance": 0.29929761046554415
   },
   {
-    "feature": "categorical__Governorate_EN_Giza",
-    "importance": 0.00970450793648792
+    "feature": "Governorate_EN_Qalyubia",
+    "importance": 0.29815790693875877
   },
   {
-    "feature": "categorical__Tire_Condition_Good",
-    "importance": 0.009260211111549075
+    "feature": "Hour_24",
+    "importance": 0.29424589706372634
   },
   {
-    "feature": "numeric__Hour_24",
-    "importance": 0.008812423499943807
+    "feature": "Governorate_EN_Matrouh",
+    "importance": 0.275298411453865
   },
   {
-    "feature": "categorical__Governorate_EN_Sharkia",
-    "importance": 0.008437486605820206
+    "feature": "Highway_Name_Wadi El Natrun Road",
+    "importance": 0.2736736869035299
   },
   {
-    "feature": "numeric__Posted_Speed_Limit_KMH",
-    "importance": 0.007709709307299057
+    "feature": "Governorate_EN_Beni Suef",
+    "importance": 0.26377709302086555
   },
   {
-    "feature": "numeric__Day_of_Week",
-    "importance": 0.007705706116389711
+    "feature": "Governorate_EN_Sohag",
+    "importance": 0.2560556522023787
   },
   {
-    "feature": "categorical__Is_Black_Spot_YES",
-    "importance": 0.0072565944585969815
+    "feature": "Prior_Violations_Count",
+    "importance": 0.2496460458922471
   },
   {
-    "feature": "categorical__Highway_Name_Sadat City Highway",
-    "importance": 0.007147320193490001
+    "feature": "Governorate_EN_Ismailia",
+    "importance": 0.1808362938332657
   },
   {
-    "feature": "categorical__Is_Urban_Road_NO",
-    "importance": 0.007139130713623965
+    "feature": "Governorate_EN_Asyut",
+    "importance": 0.16926760462070137
   },
   {
-    "feature": "categorical__Highway_Name_Damietta-Ras El Bar Road",
-    "importance": 0.006925353873434169
+    "feature": "Model_Punto",
+    "importance": 0.1505604737551463
   },
   {
-    "feature": "categorical__Is_Black_Spot_NO",
-    "importance": 0.006824543810887495
+    "feature": "Tire_Condition_Good",
+    "importance": 0.14812076927931267
   },
   {
-    "feature": "categorical__Is_Urban_Road_YES",
-    "importance": 0.006515625493960778
+    "feature": "Highway_Name_Sadat City Highway",
+    "importance": 0.14523503175255306
   },
   {
-    "feature": "numeric__Prior_Violations_Count",
-    "importance": 0.006379486299021945
+    "feature": "Make_Fiat",
+    "importance": 0.12076284955655246
   },
   {
-    "feature": "categorical__Governorate_EN_Aswan",
-    "importance": 0.006144799088067252
+    "feature": "Road_Type_Highway",
+    "importance": 0.11842557282952784
   },
   {
-    "feature": "categorical__Highway_Name_Kafr El Sheikh-Tanta Highway",
-    "importance": 0.006047746639164641
+    "feature": "Brake_Condition_Good",
+    "importance": 0.10934578252045012
   },
   {
-    "feature": "categorical__ABS_Equipped_YES",
-    "importance": 0.005800954146999755
+    "feature": "Is_Urban_Road_NO",
+    "importance": 0.10051879769525543
   },
   {
-    "feature": "categorical__Governorate_EN_Matrouh",
-    "importance": 0.005676039374324653
+    "feature": "Weather_Condition_Light Rain",
+    "importance": 0.09472309129666844
   },
   {
-    "feature": "categorical__ABS_Equipped_NO",
-    "importance": 0.005536069980656197
+    "feature": "Lighting_Condition_Night Lit",
+    "importance": 0.09449910545658664
   },
   {
-    "feature": "categorical__Road_Type_Highway",
-    "importance": 0.005438187127183317
+    "feature": "Road_Surface_Condition_Wet",
+    "importance": 0.09262517042043643
   },
   {
-    "feature": "categorical__Governorate_EN_Cairo",
-    "importance": 0.005335800400231714
+    "feature": "Weather_Condition_Dusty",
+    "importance": 0.09145134736944469
   },
   {
-    "feature": "categorical__Brake_Condition_Good",
-    "importance": 0.005306479663598718
+    "feature": "Tire_Condition_Fair",
+    "importance": 0.09136156412694585
   },
   {
-    "feature": "categorical__Vehicle_Category_Private Car",
-    "importance": 0.005032951302872554
+    "feature": "Governorate_EN_Port Said",
+    "importance": 0.08630550877360096
   },
   {
-    "feature": "categorical__Governorate_EN_Beheira",
-    "importance": 0.00486379025263825
+    "feature": "Highway_Name_Coastal International Highway",
+    "importance": 0.0860956389683731
   },
   {
-    "feature": "categorical__Highway_Name_Delta Agricultural Arterial",
-    "importance": 0.0047398456983950565
+    "feature": "Occupation_Professional",
+    "importance": 0.08593855715820262
   },
   {
-    "feature": "categorical__Tire_Condition_Fair",
-    "importance": 0.004414504832894633
+    "feature": "Road_Surface_Condition_Debris",
+    "importance": 0.08365929775725496
   },
   {
-    "feature": "categorical__Highway_Name_Cairo-Alexandria Desert Road",
-    "importance": 0.004204663287383623
+    "feature": "Road_Surface_Condition_Rough",
+    "importance": 0.0785923202205155
   },
   {
-    "feature": "categorical__Highway_Name_Upper Egypt Eastern Desert Road",
-    "importance": 0.004058539484834736
+    "feature": "License_Category_Class D (Bus)",
+    "importance": 0.07851206148610508
   },
   {
-    "feature": "categorical__Governorate_EN_Faiyum",
-    "importance": 0.004008455468417251
+    "feature": "Brake_Condition_Fair",
+    "importance": 0.07349944536197492
   },
   {
-    "feature": "categorical__Brake_Condition_Fair",
-    "importance": 0.0037374492356634444
+    "feature": "Governorate_EN_Qena",
+    "importance": 0.07308096549168171
   },
   {
-    "feature": "categorical__Seatbelt_Used_NO",
-    "importance": 0.003648619688169522
+    "feature": "Make_Hyundai",
+    "importance": 0.07181407873196863
   },
   {
-    "feature": "categorical__Seatbelt_Used_YES",
-    "importance": 0.0035662422123246195
+    "feature": "Lighting_Condition_Dawn/Dusk",
+    "importance": 0.07157560768464429
   },
   {
-    "feature": "categorical__Governorate_EN_Alexandria",
-    "importance": 0.003521831723012346
+    "feature": "Weather_Condition_Fog",
+    "importance": 0.07067996914624713
   },
   {
-    "feature": "categorical__Governorate_EN_Qalyubia",
-    "importance": 0.0033553809298918617
+    "feature": "Vehicle_Category_Private Car",
+    "importance": 0.06918452274678531
   },
   {
-    "feature": "categorical__Highway_Name_Wadi El Natrun Road",
-    "importance": 0.003354528961921487
+    "feature": "Highway_Name_Delta Agricultural Arterial",
+    "importance": 0.06643886865922445
   },
   {
-    "feature": "categorical__Highway_Name_Cairo-Ismailia Desert Road",
-    "importance": 0.00325865088600652
+    "feature": "Road_Surface_Condition_Good/Dry",
+    "importance": 0.06627071312425786
   },
   {
-    "feature": "categorical__Highway_Name_Shubra-Banha Expressway",
-    "importance": 0.003128552413227045
+    "feature": "Occupation_Government Employee",
+    "importance": 0.06402368094450134
   },
   {
-    "feature": "categorical__Governorate_EN_Red Sea",
-    "importance": 0.003007109373447381
+    "feature": "Insurance_Coverage_Comprehensive",
+    "importance": 0.06385019937953813
   },
   {
-    "feature": "categorical__License_Status_Valid",
-    "importance": 0.002816129250243918
+    "feature": "Lighting_Condition_Daylight",
+    "importance": 0.06314811808286261
   },
   {
-    "feature": "categorical__Gender_Male",
-    "importance": 0.00272022003453771
+    "feature": "Occupation_Student",
+    "importance": 0.06272554019553687
   },
   {
-    "feature": "categorical__Lighting_Condition_Daylight",
-    "importance": 0.002685105652582267
+    "feature": "Highway_Name_Cairo-Ismailia Desert Road",
+    "importance": 0.062278259276361936
   },
   {
-    "feature": "categorical__Driver_Airbag_Equipped_NO",
-    "importance": 0.002634237759827496
+    "feature": "Technical_Inspection_Passed_NO",
+    "importance": 0.06217963547848279
   },
   {
-    "feature": "categorical__Highway_Name_Matrouh-Siwa Desert Road",
-    "importance": 0.0025919612514653904
+    "feature": "Weather_Condition_Cloudy",
+    "importance": 0.06185985893218606
   },
   {
-    "feature": "categorical__Highway_Name_Asyut-Kharga Highway",
-    "importance": 0.0025171187762969144
+    "feature": "ABS_Equipped_NO",
+    "importance": 0.06146689879613561
   },
   {
-    "feature": "categorical__Highway_Name_Upper Egypt Western Desert Road",
-    "importance": 0.00248256346760602
+    "feature": "Tire_Condition_Worn",
+    "importance": 0.061401542481779536
   },
   {
-    "feature": "categorical__Gender_Female",
-    "importance": 0.0024355588174572364
+    "feature": "Road_Surface_Condition_Poor",
+    "importance": 0.06115980378339682
   },
   {
-    "feature": "categorical__Driver_Airbag_Equipped_YES",
-    "importance": 0.002428853013684705
+    "feature": "Occupation_Private Sector Employee",
+    "importance": 0.06047182328428595
   },
   {
-    "feature": "categorical__Fuel_Type_Gasoline",
-    "importance": 0.002356691986873827
+    "feature": "Highway_Name_Tanta-Mahalla Regional Road",
+    "importance": 0.06012699919260354
   },
   {
-    "feature": "categorical__Lighting_Condition_Night Lit",
-    "importance": 0.0022847616297221375
+    "feature": "Seatbelt_Used_NO",
+    "importance": 0.05993433568376593
   },
   {
-    "feature": "categorical__License_Category_Class B (Private)",
-    "importance": 0.0022400337720881788
+    "feature": "Licensing_Status_Valid",
+    "importance": 0.058976397409180745
   },
   {
-    "feature": "categorical__Governorate_EN_Qena",
-    "importance": 0.0022366878580515615
+    "feature": "Weather_Condition_Clear",
+    "importance": 0.05808442195188417
   },
   {
-    "feature": "categorical__Highway_Name_Galala Highway",
-    "importance": 0.0022295954144346806
+    "feature": "ABS_Equipped_YES",
+    "importance": 0.05767110567362663
   },
   {
-    "feature": "categorical__Governorate_EN_Port Said",
-    "importance": 0.0021889276087279897
+    "feature": "Highway_Name_Cairo-Faiyum Desert Road",
+    "importance": 0.05689900061788377
   },
   {
-    "feature": "categorical__Fuel_Type_Diesel",
-    "importance": 0.0021281714533069097
+    "feature": "Governorate_EN_Aswan",
+    "importance": 0.05638666206923584
   },
   {
-    "feature": "categorical__Weather_Condition_Clear",
-    "importance": 0.0021171861897481426
+    "feature": "Brake_Condition_Poor",
+    "importance": 0.05506069915658019
   },
   {
-    "feature": "categorical__Road_Surface_Condition_Rough",
-    "importance": 0.0021112348806431465
+    "feature": "Distracted_Driving_Mobile_YES",
+    "importance": 0.05236983209754822
   },
   {
-    "feature": "categorical__Weather_Condition_Light Rain",
-    "importance": 0.001979768700976436
+    "feature": "Gender_Female",
+    "importance": 0.04801446127193737
   },
   {
-    "feature": "categorical__Highway_Name_Regional Ring Road",
-    "importance": 0.0019027514833363768
+    "feature": "Governorate_EN_Suez",
+    "importance": 0.04796839907132245
   },
   {
-    "feature": "categorical__Highway_Name_Mansoura-Tanta Regional Road",
-    "importance": 0.0018971503504545731
+    "feature": "Distracted_Driving_Mobile_NO",
+    "importance": 0.047280861372704645
   },
   {
-    "feature": "categorical__Road_Surface_Condition_Wet",
-    "importance": 0.0018711618193536354
+    "feature": "Governorate_EN_Luxor",
+    "importance": 0.047002496070485525
   },
   {
-    "feature": "categorical__Road_Surface_Condition_Good/Dry",
-    "importance": 0.001820045195286069
+    "feature": "Technical_Inspection_Passed_YES",
+    "importance": 0.04646905626995177
   },
   {
-    "feature": "categorical__Occupation_Self-Employed Merchant",
-    "importance": 0.0018072884871451526
+    "feature": "Is_Black_Spot_NO",
+    "importance": 0.045424445326413265
   },
   {
-    "feature": "categorical__Highway_Name_Cairo-Faiyum Desert Road",
-    "importance": 0.0017969442744345606
+    "feature": "Occupation_Self-Employed Merchant",
+    "importance": 0.04430148911221185
   },
   {
-    "feature": "categorical__Lighting_Condition_Dawn/Dusk",
-    "importance": 0.0017902604706128077
+    "feature": "Highway_Name_Upper Egypt Western Desert Road",
+    "importance": 0.04393202947125997
   },
   {
-    "feature": "categorical__Weather_Condition_Fog",
-    "importance": 0.0017686677070126277
+    "feature": "Make_Chevrolet",
+    "importance": 0.042565061031551756
   },
   {
-    "feature": "categorical__Technical_Inspection_Passed_YES",
-    "importance": 0.001759314373043324
+    "feature": "Make_Nissan",
+    "importance": 0.04064023286678058
   },
   {
-    "feature": "categorical__Weather_Condition_Cloudy",
-    "importance": 0.0017501533609043318
+    "feature": "Lighting_Condition_Night Unlit",
+    "importance": 0.03956958829787541
   },
   {
-    "feature": "categorical__Occupation_Private Sector Employee",
-    "importance": 0.0017276999150894568
+    "feature": "Highway_Name_Regional Ring Road",
+    "importance": 0.03729642591908106
   },
   {
-    "feature": "categorical__Weather_Condition_Dusty",
-    "importance": 0.001726752122689827
+    "feature": "License_Category_Class B (Private)",
+    "importance": 0.03479634637987542
   },
   {
-    "feature": "categorical__Occupation_Student",
-    "importance": 0.0017076512907779082
+    "feature": "Highway_Name_Cairo-Alexandria Agriculture Road",
+    "importance": 0.034033751780876406
   },
   {
-    "feature": "categorical__Occupation_Professional",
-    "importance": 0.0017069493074702631
+    "feature": "Driver_Airbag_Equipped_NO",
+    "importance": 0.03341977780692085
   },
   {
-    "feature": "categorical__Road_Surface_Condition_Debris",
-    "importance": 0.0016945242102011267
+    "feature": "Licensing_Status_Expired",
+    "importance": 0.03308546760331295
   },
   {
-    "feature": "categorical__Road_Surface_Condition_Poor",
-    "importance": 0.0016891615426659816
+    "feature": "Make_Toyota",
+    "importance": 0.03308055822814557
   },
   {
-    "feature": "categorical__Lighting_Condition_Night Unlit",
-    "importance": 0.0016569652733922084
+    "feature": "Model_Sunny",
+    "importance": 0.03179369430087625
   },
   {
-    "feature": "categorical__Occupation_Professional Commercial Driver",
-    "importance": 0.0016246172067268224
+    "feature": "Model_Cruze",
+    "importance": 0.027196590745885724
   },
   {
-    "feature": "categorical__Tire_Condition_Worn",
-    "importance": 0.001621587134033961
+    "feature": "Vehicle_Category_Microbus",
+    "importance": 0.026447020157542748
   },
   {
-    "feature": "categorical__Highway_Name_Tanta-Mahalla Regional Road",
-    "importance": 0.0016132640587220323
+    "feature": "Make_Kia",
+    "importance": 0.026136882045460174
   },
   {
-    "feature": "categorical__Make_Toyota",
-    "importance": 0.0016064328992633583
+    "feature": "Highway_Name_Upper Egypt Eastern Desert Road",
+    "importance": 0.02522552061071334
   },
   {
-    "feature": "categorical__Technical_Inspection_Passed_NO",
-    "importance": 0.001538230624311686
+    "feature": "License_Category_Motorcycle License",
+    "importance": 0.02449684470557742
   },
   {
-    "feature": "categorical__Model_Corolla",
-    "importance": 0.0015149102465743887
+    "feature": "Is_Urban_Road_YES",
+    "importance": 0.024039447332037493
   },
   {
-    "feature": "categorical__Make_Hyundai",
-    "importance": 0.001510874229699624
+    "feature": "Is_Black_Spot_YES",
+    "importance": 0.023759391228337763
   },
   {
-    "feature": "categorical__Occupation_Government Employee",
-    "importance": 0.0014654398292135874
+    "feature": "Highway_Name_Galala Highway",
+    "importance": 0.023367656118341802
   },
   {
-    "feature": "categorical__Distracted_Driving_Mobile_YES",
-    "importance": 0.0014484689604609836
+    "feature": "License_Status_Expired",
+    "importance": 0.022642422840527466
   },
   {
-    "feature": "categorical__Make_Chevrolet",
-    "importance": 0.0014379696850183971
+    "feature": "Highway_Name_Suez-Hurghada Coastal Road",
+    "importance": 0.022604203479995078
   },
   {
-    "feature": "categorical__Distracted_Driving_Mobile_NO",
-    "importance": 0.0014261383500398489
+    "feature": "Vehicle_Category_Tuk-tuk",
+    "importance": 0.022498813311933947
   },
   {
-    "feature": "categorical__Model_Sunny",
-    "importance": 0.0013958173832008679
+    "feature": "Highway_Name_Ismailia-Port Said Highway",
+    "importance": 0.021988944831646182
   },
   {
-    "feature": "categorical__Make_Nissan",
-    "importance": 0.0013915325818195476
+    "feature": "Highway_Name_Matrouh-Siwa Desert Road",
+    "importance": 0.020307424230969685
   },
   {
-    "feature": "categorical__Highway_Name_Western Desert Highway",
-    "importance": 0.0013793248517314316
+    "feature": "License_Status_Valid",
+    "importance": 0.020160918243650905
   },
   {
-    "feature": "categorical__Model_Cruze",
-    "importance": 0.001342913121666956
+    "feature": "Highway_Name_Nile Valley Agriculture Road",
+    "importance": 0.019919629840009837
   },
   {
-    "feature": "categorical__Model_Verna",
-    "importance": 0.0013386588979175762
+    "feature": "Seatbelt_Used_YES",
+    "importance": 0.01925120343931177
   },
   {
-    "feature": "categorical__Governorate_EN_Minya",
-    "importance": 0.001337888073840564
+    "feature": "Highway_Name_Faiyum Regional Ring Road",
+    "importance": 0.018407762893966024
   },
   {
-    "feature": "categorical__License_Status_Expired",
-    "importance": 0.0013261188404770344
+    "feature": "Fuel_Type_Diesel",
+    "importance": 0.017964853927643035
   },
   {
-    "feature": "categorical__Model_Cerato",
-    "importance": 0.0012603241569926313
+    "feature": "Vehicle_Category_Truck",
+    "importance": 0.017512600236299733
   },
   {
-    "feature": "categorical__Make_Kia",
-    "importance": 0.0011606709444697252
+    "feature": "Insurance_Coverage_Third-party",
+    "importance": 0.01690561259875392
   },
   {
-    "feature": "categorical__Highway_Name_Hurghada-Marsa Alam Highway",
-    "importance": 0.0011319656389119827
+    "feature": "License_Category_Class C (Truck)",
+    "importance": 0.015253164195962822
   },
   {
-    "feature": "categorical__Vehicle_Category_Bus",
-    "importance": 0.0010717868930720346
+    "feature": "Highway_Name_Cairo Ring Road",
+    "importance": 0.014674250806013707
   },
   {
-    "feature": "categorical__Governorate_EN_Ismailia",
-    "importance": 0.0010320094934688031
+    "feature": "Model_Cerato",
+    "importance": 0.014438348788275249
   },
   {
-    "feature": "categorical__License_Category_Motorcycle License",
-    "importance": 0.001021204507419416
+    "feature": "Overload_Flag_NO",
+    "importance": 0.014039956691165555
   },
   {
-    "feature": "categorical__Highway_Name_Nile Valley Agriculture Road",
-    "importance": 0.0010042635438703683
+    "feature": "Overload_Flag_YES",
+    "importance": 0.013863321958058011
   },
   {
-    "feature": "categorical__Brake_Condition_Poor",
-    "importance": 0.0009884620318382372
+    "feature": "Highway_Name_Autostrad Expressway",
+    "importance": 0.013504440955003031
   },
   {
-    "feature": "categorical__Governorate_EN_South Sinai",
-    "importance": 0.0009457241127908528
+    "feature": "Fuel_Type_Gasoline",
+    "importance": 0.013189731171890193
   },
   {
-    "feature": "categorical__Vehicle_Category_Microbus",
-    "importance": 0.0009261214452620422
+    "feature": "Model_Corolla",
+    "importance": 0.012399722198118317
   },
   {
-    "feature": "categorical__Governorate_EN_Beni Suef",
-    "importance": 0.0008660844998226166
+    "feature": "Helmet_Used_NO",
+    "importance": 0.010697546327054212
   },
   {
-    "feature": "categorical__Highway_Name_30th of June Axis",
-    "importance": 0.0008401509582418767
+    "feature": "Gender_Male",
+    "importance": 0.009636200684434468
   },
   {
-    "feature": "categorical__Vehicle_Category_Motorcycle",
-    "importance": 0.0008297229174726418
+    "feature": "Road_Type_Urban",
+    "importance": 0.009529930006379134
   },
   {
-    "feature": "categorical__Highway_Name_Cairo-Alexandria Agriculture Road",
-    "importance": 0.0008053776559024925
+    "feature": "Road_Type_Regional",
+    "importance": 0.009301333849173914
   },
   {
-    "feature": "categorical__Governorate_EN_North Sinai",
-    "importance": 0.0007897158028812385
+    "feature": "Tire_Condition_Critical",
+    "importance": 0.008875029726702168
   },
   {
-    "feature": "categorical__Governorate_EN_Suez",
-    "importance": 0.0007629907351046891
+    "feature": "Model_Verna",
+    "importance": 0.008298678199338579
   },
   {
-    "feature": "categorical__License_Category_Class C (Truck)",
-    "importance": 0.0007270410442276179
+    "feature": "Driver_Airbag_Equipped_YES",
+    "importance": 0.008145960482179668
   },
   {
-    "feature": "categorical__Highway_Name_Cairo Ring Road",
-    "importance": 0.0006720024809059294
+    "feature": "Vehicle_Category_Motorcycle",
+    "importance": 0.008019640405618892
   },
   {
-    "feature": "categorical__Vehicle_Category_Tuk-tuk",
-    "importance": 0.0006536205972071683
+    "feature": "Vehicle_Category_Bus",
+    "importance": 0.007862222996356546
   },
   {
-    "feature": "categorical__Vehicle_Category_Truck",
-    "importance": 0.0006509959649927783
+    "feature": "Occupation_Professional Commercial Driver",
+    "importance": 0.007837974007988253
   },
   {
-    "feature": "categorical__Highway_Name_Ismailia-Port Said Highway",
-    "importance": 0.0006204293950893553
+    "feature": "Helmet_Used_YES",
+    "importance": 0.0068166968490691515
   },
   {
-    "feature": "categorical__Road_Type_Agricultural",
-    "importance": 0.0006104490497106283
+    "feature": "Licensing_Status_Suspended",
+    "importance": 0.0065993151740732815
   },
   {
-    "feature": "categorical__Highway_Name_Arish-Kantara Highway",
-    "importance": 0.0005993670341576402
+    "feature": "Highway_Name_Luxor-Aswan Highway",
+    "importance": 0.004471019692934846
   },
   {
-    "feature": "categorical__Governorate_EN_New Valley",
-    "importance": 0.0005411112419312785
+    "feature": "Highway_Name_Kafr El Sheikh-Tanta Highway",
+    "importance": 0.003981089738427189
   },
   {
-    "feature": "categorical__Highway_Name_Faiyum Regional Ring Road",
-    "importance": 0.0005032401813199965
+    "feature": "Road_Type_Ring Road",
+    "importance": 0.0030134706916636195
   },
   {
-    "feature": "categorical__Governorate_EN_Luxor",
-    "importance": 0.0004977120552984
+    "feature": "Highway_Name_Alexandria Ring Road",
+    "importance": 0.0027736059916718867
   },
   {
-    "feature": "categorical__Road_Type_Urban",
-    "importance": 0.0004602497421338735
+    "feature": "Highway_Name_Cairo-Alexandria Desert Road",
+    "importance": 0.0026477800989282516
   },
   {
-    "feature": "categorical__Road_Type_Regional",
-    "importance": 0.000406531625418783
+    "feature": "Road_Type_Agricultural",
+    "importance": 0.0023441974447674313
   },
   {
-    "feature": "categorical__Licensing_Status_Suspended",
-    "importance": 0.0004042385271061472
+    "feature": "Highway_Name_Western Desert Highway",
+    "importance": 0.002199810543472014
   },
   {
-    "feature": "categorical__Highway_Name_Suez-Hurghada Coastal Road",
-    "importance": 0.00036598687824689535
+    "feature": "License_Status_Suspended",
+    "importance": 0.0018228321059117227
   },
   {
-    "feature": "categorical__Helmet_Used_NO",
-    "importance": 0.00036272281081027173
+    "feature": "Highway_Name_Mansoura-Tanta Regional Road",
+    "importance": 0.0010646487127621508
   },
   {
-    "feature": "categorical__Road_Type_Ring Road",
-    "importance": 0.0003549731846058679
+    "feature": "Highway_Name_30th of June Axis",
+    "importance": 0.0
   },
   {
-    "feature": "categorical__Helmet_Used_YES",
-    "importance": 0.0003458167319953446
+    "feature": "Highway_Name_Arish-Kantara Highway",
+    "importance": 0.0
   },
   {
-    "feature": "categorical__Highway_Name_Alexandria Ring Road",
-    "importance": 0.0003415959131941206
+    "feature": "Highway_Name_Asyut-Kharga Highway",
+    "importance": 0.0
   },
   {
-    "feature": "categorical__License_Status_Suspended",
-    "importance": 0.00030478404218622766
+    "feature": "Highway_Name_Damietta-Ras El Bar Road",
+    "importance": 0.0
   },
   {
-    "feature": "categorical__Tire_Condition_Critical",
-    "importance": 0.00030139153868945305
+    "feature": "Governorate_EN_North Sinai",
+    "importance": 0.0
   },
   {
-    "feature": "categorical__Highway_Name_Suez Canal Corridor",
-    "importance": 0.000280054327162711
+    "feature": "Governorate_EN_Red Sea",
+    "importance": 0.0
   },
   {
-    "feature": "categorical__Overload_Flag_YES",
-    "importance": 0.0002708873176572768
+    "feature": "Governorate_EN_New Valley",
+    "importance": 0.0
   },
   {
-    "feature": "categorical__Highway_Name_Kharga-Dakhla Highway",
-    "importance": 0.00026694289714175037
+    "feature": "Highway_Name_Hurghada-Marsa Alam Highway",
+    "importance": 0.0
   },
   {
-    "feature": "categorical__Overload_Flag_NO",
-    "importance": 0.0002572962295910645
+    "feature": "Highway_Name_Suez Canal Corridor",
+    "importance": 0.0
   },
   {
-    "feature": "categorical__Highway_Name_Luxor-Aswan Highway",
-    "importance": 0.0002452461613156384
+    "feature": "Highway_Name_Kharga-Dakhla Highway",
+    "importance": 0.0
   },
   {
-    "feature": "categorical__Highway_Name_Autostrad Expressway",
-    "importance": 0.00020834637806212055
+    "feature": "Governorate_EN_South Sinai",
+    "importance": 0.0
   }
 ]

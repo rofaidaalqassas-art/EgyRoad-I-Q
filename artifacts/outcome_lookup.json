@@ -1,428 +1,560 @@
 {
   "Alexandria": {
     "حرج": {
-      "avg_fatalities": 0.0,
-      "avg_injuries": 15.0,
-      "avg_economic_loss_egp": 1898035.71,
-      "sample_size": 7
+      "avg_fatalities": 1.84,
+      "avg_injuries": 14.77,
+      "avg_economic_loss_egp": 1695971.85,
+      "sample_size": 1039
     },
     "متوسط": {
-      "avg_fatalities": 1.86,
-      "avg_injuries": 0.11,
-      "avg_economic_loss_egp": 1689789.99,
-      "sample_size": 140
+      "avg_fatalities": 2.69,
+      "avg_injuries": 2.47,
+      "avg_economic_loss_egp": 1698176.96,
+      "sample_size": 49
     },
     "مرتفع": {
-      "avg_fatalities": 1.89,
-      "avg_injuries": 12.95,
-      "avg_economic_loss_egp": 1693051.9,
-      "sample_size": 1239
+      "avg_fatalities": 1.76,
+      "avg_injuries": 11.71,
+      "avg_economic_loss_egp": 1893542.59,
+      "sample_size": 58
+    },
+    "منخفض": {
+      "avg_fatalities": 1.92,
+      "avg_injuries": 0.1,
+      "avg_economic_loss_egp": 1634988.56,
+      "sample_size": 240
     }
   },
   "Aswan": {
+    "حرج": {
+      "avg_fatalities": 1.13,
+      "avg_injuries": 13.85,
+      "avg_economic_loss_egp": 1708374.62,
+      "sample_size": 47
+    },
     "متوسط": {
-      "avg_fatalities": 1.39,
-      "avg_injuries": 8.33,
-      "avg_economic_loss_egp": 1651445.91,
-      "sample_size": 105
+      "avg_fatalities": 0.75,
+      "avg_injuries": 6.25,
+      "avg_economic_loss_egp": 1889993.5,
+      "sample_size": 8
+    },
+    "مرتفع": {
+      "avg_fatalities": 1.09,
+      "avg_injuries": 11.24,
+      "avg_economic_loss_egp": 1674260.58,
+      "sample_size": 33
     },
     "منخفض": {
-      "avg_fatalities": 1.65,
-      "avg_injuries": 0.97,
-      "avg_economic_loss_egp": 1617352.84,
-      "sample_size": 374
+      "avg_fatalities": 1.71,
+      "avg_injuries": 0.43,
+      "avg_economic_loss_egp": 1605185.76,
+      "sample_size": 391
     }
   },
   "Asyut": {
     "حرج": {
-      "avg_fatalities": 0.72,
+      "avg_fatalities": 0.74,
       "avg_injuries": 14.99,
-      "avg_economic_loss_egp": 2738698.48,
-      "sample_size": 1367
-    },
-    "مرتفع": {
-      "avg_fatalities": 0.84,
-      "avg_injuries": 14.96,
-      "avg_economic_loss_egp": 1670078.21,
-      "sample_size": 185
+      "avg_economic_loss_egp": 2611317.84,
+      "sample_size": 1552
     }
   },
   "Beheira": {
+    "حرج": {
+      "avg_fatalities": 0.18,
+      "avg_injuries": 14.85,
+      "avg_economic_loss_egp": 1531522.22,
+      "sample_size": 1379
+    },
     "متوسط": {
-      "avg_fatalities": 0.65,
-      "avg_injuries": 8.05,
-      "avg_economic_loss_egp": 1511416.91,
-      "sample_size": 2737
+      "avg_fatalities": 0.0,
+      "avg_injuries": 3.79,
+      "avg_economic_loss_egp": 1271226.67,
+      "sample_size": 122
+    },
+    "مرتفع": {
+      "avg_fatalities": 0.0,
+      "avg_injuries": 12.3,
+      "avg_economic_loss_egp": 1548322.89,
+      "sample_size": 179
     },
     "منخفض": {
-      "avg_fatalities": 0.66,
-      "avg_injuries": 1.04,
-      "avg_economic_loss_egp": 1358082.94,
-      "sample_size": 1224
+      "avg_fatalities": 1.03,
+      "avg_injuries": 0.07,
+      "avg_economic_loss_egp": 1426932.49,
+      "sample_size": 2281
     }
   },
   "Beni Suef": {
+    "حرج": {
+      "avg_fatalities": 0.9,
+      "avg_injuries": 14.69,
+      "avg_economic_loss_egp": 1749460.89,
+      "sample_size": 264
+    },
     "متوسط": {
-      "avg_fatalities": 0.92,
-      "avg_injuries": 6.68,
-      "avg_economic_loss_egp": 1637943.81,
-      "sample_size": 823
+      "avg_fatalities": 0.28,
+      "avg_injuries": 5.96,
+      "avg_economic_loss_egp": 1610347.76,
+      "sample_size": 25
+    },
+    "مرتفع": {
+      "avg_fatalities": 0.54,
+      "avg_injuries": 13.82,
+      "avg_economic_loss_egp": 1650724.12,
+      "sample_size": 105
     },
     "منخفض": {
-      "avg_fatalities": 0.86,
-      "avg_injuries": 0.0,
-      "avg_economic_loss_egp": 1762596.24,
-      "sample_size": 21
+      "avg_fatalities": 1.06,
+      "avg_injuries": 0.03,
+      "avg_economic_loss_egp": 1576888.61,
+      "sample_size": 450
     }
   },
   "Cairo": {
+    "حرج": {
+      "avg_fatalities": 4.95,
+      "avg_injuries": 14.63,
+      "avg_economic_loss_egp": 2000695.96,
+      "sample_size": 141
+    },
     "متوسط": {
-      "avg_fatalities": 4.66,
-      "avg_injuries": 6.5,
-      "avg_economic_loss_egp": 1974959.06,
-      "sample_size": 474
+      "avg_fatalities": 3.14,
+      "avg_injuries": 5.57,
+      "avg_economic_loss_egp": 1836714.81,
+      "sample_size": 21
+    },
+    "مرتفع": {
+      "avg_fatalities": 4.82,
+      "avg_injuries": 12.5,
+      "avg_economic_loss_egp": 1841448.96,
+      "sample_size": 92
     },
     "منخفض": {
-      "avg_fatalities": 5.21,
-      "avg_injuries": 0.69,
-      "avg_economic_loss_egp": 1886969.87,
-      "sample_size": 433
+      "avg_fatalities": 4.99,
+      "avg_injuries": 0.08,
+      "avg_economic_loss_egp": 1934312.56,
+      "sample_size": 653
     }
   },
   "Dakahlia": {
+    "حرج": {
+      "avg_fatalities": 0.4,
+      "avg_injuries": 14.57,
+      "avg_economic_loss_egp": 1486832.55,
+      "sample_size": 4379
+    },
     "متوسط": {
-      "avg_fatalities": 0.35,
-      "avg_injuries": 4.48,
-      "avg_economic_loss_egp": 1377357.79,
-      "sample_size": 2681
+      "avg_fatalities": 0.0,
+      "avg_injuries": 4.77,
+      "avg_economic_loss_egp": 1351332.27,
+      "sample_size": 62
     },
     "مرتفع": {
-      "avg_fatalities": 0.33,
-      "avg_injuries": 13.59,
-      "avg_economic_loss_egp": 1520474.25,
-      "sample_size": 3872
+      "avg_fatalities": 0.38,
+      "avg_injuries": 10.17,
+      "avg_economic_loss_egp": 1474653.11,
+      "sample_size": 47
+    },
+    "منخفض": {
+      "avg_fatalities": 0.22,
+      "avg_injuries": 0.02,
+      "avg_economic_loss_egp": 1412126.64,
+      "sample_size": 2065
     }
   },
   "Damietta": {
     "حرج": {
-      "avg_fatalities": 0.55,
-      "avg_injuries": 14.95,
-      "avg_economic_loss_egp": 2764217.81,
-      "sample_size": 2194
+      "avg_fatalities": 0.57,
+      "avg_injuries": 14.97,
+      "avg_economic_loss_egp": 2755446.35,
+      "sample_size": 2211
     },
     "متوسط": {
-      "avg_fatalities": 0.0,
-      "avg_injuries": 0.0,
-      "avg_economic_loss_egp": 1123690.0,
-      "sample_size": 2
+      "avg_fatalities": 0.33,
+      "avg_injuries": 4.0,
+      "avg_economic_loss_egp": 1468193.0,
+      "sample_size": 3
     },
     "مرتفع": {
-      "avg_fatalities": 1.82,
-      "avg_injuries": 10.0,
-      "avg_economic_loss_egp": 1522633.61,
-      "sample_size": 33
+      "avg_fatalities": 0.0,
+      "avg_injuries": 5.0,
+      "avg_economic_loss_egp": 954932.0,
+      "sample_size": 1
+    },
+    "منخفض": {
+      "avg_fatalities": 0.0,
+      "avg_injuries": 0.0,
+      "avg_economic_loss_egp": 1395483.86,
+      "sample_size": 14
     }
   },
   "Faiyum": {
+    "حرج": {
+      "avg_fatalities": 0.11,
+      "avg_injuries": 14.48,
+      "avg_economic_loss_egp": 1637146.35,
+      "sample_size": 106
+    },
     "متوسط": {
-      "avg_fatalities": 0.27,
-      "avg_injuries": 11.64,
-      "avg_economic_loss_egp": 1693181.26,
-      "sample_size": 155
+      "avg_fatalities": 1.14,
+      "avg_injuries": 7.9,
+      "avg_economic_loss_egp": 1704865.1,
+      "sample_size": 21
+    },
+    "مرتفع": {
+      "avg_fatalities": 0.81,
+      "avg_injuries": 13.16,
+      "avg_economic_loss_egp": 1757207.08,
+      "sample_size": 37
     },
     "منخفض": {
-      "avg_fatalities": 1.12,
-      "avg_injuries": 0.65,
-      "avg_economic_loss_egp": 1668435.11,
-      "sample_size": 593
+      "avg_fatalities": 1.1,
+      "avg_injuries": 0.0,
+      "avg_economic_loss_egp": 1673747.9,
+      "sample_size": 584
     }
   },
   "Gharbiya": {
+    "حرج": {
+      "avg_fatalities": 0.4,
+      "avg_injuries": 14.66,
+      "avg_economic_loss_egp": 1505013.43,
+      "sample_size": 1196
+    },
     "متوسط": {
-      "avg_fatalities": 0.27,
-      "avg_injuries": 8.73,
-      "avg_economic_loss_egp": 1513370.55,
-      "sample_size": 1980
+      "avg_fatalities": 0.25,
+      "avg_injuries": 7.84,
+      "avg_economic_loss_egp": 1573913.43,
+      "sample_size": 61
+    },
+    "مرتفع": {
+      "avg_fatalities": 0.07,
+      "avg_injuries": 13.56,
+      "avg_economic_loss_egp": 1467465.55,
+      "sample_size": 124
     },
     "منخفض": {
-      "avg_fatalities": 0.29,
-      "avg_injuries": 1.11,
-      "avg_economic_loss_egp": 1377665.95,
-      "sample_size": 2352
+      "avg_fatalities": 0.24,
+      "avg_injuries": 0.07,
+      "avg_economic_loss_egp": 1409276.01,
+      "sample_size": 2951
     }
   },
   "Giza": {
     "حرج": {
-      "avg_fatalities": 0.03,
-      "avg_injuries": 15.0,
-      "avg_economic_loss_egp": 3524157.59,
-      "sample_size": 202
+      "avg_fatalities": 1.68,
+      "avg_injuries": 14.92,
+      "avg_economic_loss_egp": 2160385.24,
+      "sample_size": 928
     },
     "متوسط": {
-      "avg_fatalities": 4.44,
-      "avg_injuries": 3.18,
-      "avg_economic_loss_egp": 1665494.33,
-      "sample_size": 216
+      "avg_fatalities": 6.0,
+      "avg_injuries": 0.68,
+      "avg_economic_loss_egp": 1826750.82,
+      "sample_size": 22
     },
     "مرتفع": {
-      "avg_fatalities": 2.21,
-      "avg_injuries": 14.66,
-      "avg_economic_loss_egp": 1780886.07,
-      "sample_size": 721
+      "avg_fatalities": 5.61,
+      "avg_injuries": 13.84,
+      "avg_economic_loss_egp": 1656550.23,
+      "sample_size": 31
+    },
+    "منخفض": {
+      "avg_fatalities": 4.39,
+      "avg_injuries": 0.0,
+      "avg_economic_loss_egp": 1640926.49,
+      "sample_size": 158
     }
   },
   "Ismailia": {
     "حرج": {
-      "avg_fatalities": 1.94,
-      "avg_injuries": 14.72,
-      "avg_economic_loss_egp": 1421519.15,
-      "sample_size": 108
+      "avg_fatalities": 2.65,
+      "avg_injuries": 14.89,
+      "avg_economic_loss_egp": 1380779.46,
+      "sample_size": 203
     },
     "متوسط": {
-      "avg_fatalities": 4.85,
-      "avg_injuries": 6.6,
-      "avg_economic_loss_egp": 1363882.63,
-      "sample_size": 155
+      "avg_fatalities": 6.0,
+      "avg_injuries": 1.43,
+      "avg_economic_loss_egp": 1316835.43,
+      "sample_size": 7
     },
     "مرتفع": {
-      "avg_fatalities": 4.82,
-      "avg_injuries": 10.84,
-      "avg_economic_loss_egp": 1372008.59,
-      "sample_size": 61
+      "avg_fatalities": 6.0,
+      "avg_injuries": 12.44,
+      "avg_economic_loss_egp": 1460896.67,
+      "sample_size": 18
+    },
+    "منخفض": {
+      "avg_fatalities": 5.91,
+      "avg_injuries": 0.18,
+      "avg_economic_loss_egp": 1383397.72,
+      "sample_size": 96
     }
   },
   "Kafr El Sheikh": {
     "حرج": {
-      "avg_fatalities": 0.17,
-      "avg_injuries": 14.84,
-      "avg_economic_loss_egp": 1602700.15,
-      "sample_size": 971
+      "avg_fatalities": 0.16,
+      "avg_injuries": 14.9,
+      "avg_economic_loss_egp": 1567025.64,
+      "sample_size": 1137
     },
     "متوسط": {
-      "avg_fatalities": 4.29,
-      "avg_injuries": 0.0,
-      "avg_economic_loss_egp": 917882.43,
-      "sample_size": 7
+      "avg_fatalities": 0.0,
+      "avg_injuries": 0.94,
+      "avg_economic_loss_egp": 1142076.75,
+      "sample_size": 16
     },
     "مرتفع": {
-      "avg_fatalities": 0.32,
-      "avg_injuries": 11.85,
-      "avg_economic_loss_egp": 1343773.72,
-      "sample_size": 219
+      "avg_fatalities": 0.0,
+      "avg_injuries": 6.88,
+      "avg_economic_loss_egp": 1181512.12,
+      "sample_size": 8
+    },
+    "منخفض": {
+      "avg_fatalities": 2.47,
+      "avg_injuries": 0.0,
+      "avg_economic_loss_egp": 1319444.22,
+      "sample_size": 36
     }
   },
   "Luxor": {
     "حرج": {
-      "avg_fatalities": 1.87,
-      "avg_injuries": 15.0,
-      "avg_economic_loss_egp": 1743222.0,
-      "sample_size": 15
+      "avg_fatalities": 1.78,
+      "avg_injuries": 14.89,
+      "avg_economic_loss_egp": 1532355.97,
+      "sample_size": 36
     },
     "متوسط": {
-      "avg_fatalities": 2.3,
-      "avg_injuries": 3.79,
-      "avg_economic_loss_egp": 1294204.23,
-      "sample_size": 105
+      "avg_fatalities": 0.0,
+      "avg_injuries": 15.0,
+      "avg_economic_loss_egp": 1372717.0,
+      "sample_size": 2
+    },
+    "مرتفع": {
+      "avg_fatalities": 3.0,
+      "avg_injuries": 14.25,
+      "avg_economic_loss_egp": 1133260.75,
+      "sample_size": 4
     },
     "منخفض": {
-      "avg_fatalities": 0.88,
+      "avg_fatalities": 2.34,
       "avg_injuries": 0.0,
-      "avg_economic_loss_egp": 1176238.5,
-      "sample_size": 8
+      "avg_economic_loss_egp": 1267516.16,
+      "sample_size": 86
     }
   },
   "Matrouh": {
     "حرج": {
-      "avg_fatalities": 0.74,
-      "avg_injuries": 14.95,
-      "avg_economic_loss_egp": 3013901.01,
-      "sample_size": 716
-    },
-    "مرتفع": {
-      "avg_fatalities": 1.34,
-      "avg_injuries": 14.87,
-      "avg_economic_loss_egp": 1838536.7,
-      "sample_size": 83
+      "avg_fatalities": 0.8,
+      "avg_injuries": 14.94,
+      "avg_economic_loss_egp": 2891804.35,
+      "sample_size": 799
     }
   },
   "Menoufia": {
+    "حرج": {
+      "avg_fatalities": 0.86,
+      "avg_injuries": 14.32,
+      "avg_economic_loss_egp": 1437772.52,
+      "sample_size": 590
+    },
     "متوسط": {
-      "avg_fatalities": 0.79,
-      "avg_injuries": 12.88,
-      "avg_economic_loss_egp": 1497262.22,
-      "sample_size": 560
+      "avg_fatalities": 0.78,
+      "avg_injuries": 8.59,
+      "avg_economic_loss_egp": 1837754.52,
+      "sample_size": 58
+    },
+    "مرتفع": {
+      "avg_fatalities": 0.23,
+      "avg_injuries": 14.62,
+      "avg_economic_loss_egp": 1555421.91,
+      "sample_size": 146
     },
     "منخفض": {
-      "avg_fatalities": 0.5,
-      "avg_injuries": 1.67,
-      "avg_economic_loss_egp": 1449388.91,
-      "sample_size": 2493
+      "avg_fatalities": 0.49,
+      "avg_injuries": 0.13,
+      "avg_economic_loss_egp": 1447466.25,
+      "sample_size": 2259
     }
   },
   "Minya": {
+    "حرج": {
+      "avg_fatalities": 1.13,
+      "avg_injuries": 14.43,
+      "avg_economic_loss_egp": 1743961.66,
+      "sample_size": 352
+    },
     "متوسط": {
-      "avg_fatalities": 1.42,
-      "avg_injuries": 6.83,
-      "avg_economic_loss_egp": 1712821.23,
-      "sample_size": 910
+      "avg_fatalities": 1.37,
+      "avg_injuries": 3.0,
+      "avg_economic_loss_egp": 1580874.97,
+      "sample_size": 35
     },
     "مرتفع": {
-      "avg_fatalities": 2.62,
-      "avg_injuries": 14.12,
-      "avg_economic_loss_egp": 1647717.38,
-      "sample_size": 16
+      "avg_fatalities": 0.89,
+      "avg_injuries": 12.55,
+      "avg_economic_loss_egp": 1557477.34,
+      "sample_size": 96
     },
     "منخفض": {
-      "avg_fatalities": 1.0,
-      "avg_injuries": 0.0,
-      "avg_economic_loss_egp": 1470021.61,
-      "sample_size": 18
+      "avg_fatalities": 1.78,
+      "avg_injuries": 0.1,
+      "avg_economic_loss_egp": 1719670.79,
+      "sample_size": 461
     }
   },
   "New Valley": {
     "حرج": {
-      "avg_fatalities": 0.99,
-      "avg_injuries": 15.0,
-      "avg_economic_loss_egp": 2918435.74,
-      "sample_size": 148
-    },
-    "مرتفع": {
-      "avg_fatalities": 2.64,
-      "avg_injuries": 14.55,
-      "avg_economic_loss_egp": 2443066.53,
-      "sample_size": 58
+      "avg_fatalities": 1.45,
+      "avg_injuries": 14.87,
+      "avg_economic_loss_egp": 2784593.93,
+      "sample_size": 206
     }
   },
   "North Sinai": {
     "حرج": {
-      "avg_fatalities": 0.31,
-      "avg_injuries": 15.0,
-      "avg_economic_loss_egp": 1272269.24,
-      "sample_size": 86
-    },
-    "مرتفع": {
-      "avg_fatalities": 0.69,
-      "avg_injuries": 14.62,
-      "avg_economic_loss_egp": 1274200.95,
-      "sample_size": 103
+      "avg_fatalities": 0.52,
+      "avg_injuries": 14.79,
+      "avg_economic_loss_egp": 1273321.97,
+      "sample_size": 189
     }
   },
   "Port Said": {
-    "متوسط": {
-      "avg_fatalities": 3.06,
-      "avg_injuries": 0.0,
-      "avg_economic_loss_egp": 1350096.78,
-      "sample_size": 50
-    },
     "منخفض": {
-      "avg_fatalities": 6.0,
+      "avg_fatalities": 3.9,
       "avg_injuries": 0.0,
-      "avg_economic_loss_egp": 1508810.0,
-      "sample_size": 20
+      "avg_economic_loss_egp": 1395443.41,
+      "sample_size": 70
     }
   },
   "Qalyubia": {
+    "حرج": {
+      "avg_fatalities": 1.4,
+      "avg_injuries": 14.44,
+      "avg_economic_loss_egp": 1538090.06,
+      "sample_size": 221
+    },
     "متوسط": {
-      "avg_fatalities": 1.18,
-      "avg_injuries": 9.55,
-      "avg_economic_loss_egp": 1586610.01,
-      "sample_size": 445
+      "avg_fatalities": 1.35,
+      "avg_injuries": 7.68,
+      "avg_economic_loss_egp": 1691897.16,
+      "sample_size": 31
+    },
+    "مرتفع": {
+      "avg_fatalities": 0.73,
+      "avg_injuries": 12.63,
+      "avg_economic_loss_egp": 1740566.52,
+      "sample_size": 90
     },
     "منخفض": {
-      "avg_fatalities": 1.16,
-      "avg_injuries": 0.69,
-      "avg_economic_loss_egp": 1621207.01,
-      "sample_size": 667
+      "avg_fatalities": 1.14,
+      "avg_injuries": 0.18,
+      "avg_economic_loss_egp": 1608271.21,
+      "sample_size": 770
     }
   },
   "Qena": {
+    "حرج": {
+      "avg_fatalities": 0.92,
+      "avg_injuries": 14.43,
+      "avg_economic_loss_egp": 1715766.04,
+      "sample_size": 325
+    },
     "متوسط": {
-      "avg_fatalities": 0.98,
-      "avg_injuries": 6.56,
-      "avg_economic_loss_egp": 1786620.92,
-      "sample_size": 231
+      "avg_fatalities": 1.25,
+      "avg_injuries": 1.25,
+      "avg_economic_loss_egp": 1900151.12,
+      "sample_size": 24
     },
     "مرتفع": {
-      "avg_fatalities": 1.06,
-      "avg_injuries": 13.98,
-      "avg_economic_loss_egp": 1689912.47,
-      "sample_size": 262
+      "avg_fatalities": 1.0,
+      "avg_injuries": 12.72,
+      "avg_economic_loss_egp": 1719174.33,
+      "sample_size": 36
+    },
+    "منخفض": {
+      "avg_fatalities": 1.29,
+      "avg_injuries": 0.0,
+      "avg_economic_loss_egp": 1762487.36,
+      "sample_size": 108
     }
   },
   "Red Sea": {
     "حرج": {
-      "avg_fatalities": 1.36,
-      "avg_injuries": 14.96,
-      "avg_economic_loss_egp": 2782045.21,
-      "sample_size": 473
-    },
-    "مرتفع": {
-      "avg_fatalities": 2.98,
-      "avg_injuries": 14.89,
-      "avg_economic_loss_egp": 1798899.31,
-      "sample_size": 120
+      "avg_fatalities": 1.69,
+      "avg_injuries": 14.94,
+      "avg_economic_loss_egp": 2583094.94,
+      "sample_size": 593
     }
   },
   "Sharkia": {
+    "حرج": {
+      "avg_fatalities": 0.26,
+      "avg_injuries": 14.4,
+      "avg_economic_loss_egp": 1556865.31,
+      "sample_size": 1672
+    },
     "متوسط": {
-      "avg_fatalities": 0.17,
-      "avg_injuries": 8.16,
-      "avg_economic_loss_egp": 1545285.93,
-      "sample_size": 3228
+      "avg_fatalities": 0.02,
+      "avg_injuries": 4.58,
+      "avg_economic_loss_egp": 1452505.16,
+      "sample_size": 173
+    },
+    "مرتفع": {
+      "avg_fatalities": 0.35,
+      "avg_injuries": 12.42,
+      "avg_economic_loss_egp": 1661042.76,
+      "sample_size": 233
     },
     "منخفض": {
-      "avg_fatalities": 0.3,
-      "avg_injuries": 0.87,
-      "avg_economic_loss_egp": 1329201.77,
-      "sample_size": 1889
+      "avg_fatalities": 0.2,
+      "avg_injuries": 0.07,
+      "avg_economic_loss_egp": 1401006.9,
+      "sample_size": 3039
     }
   },
   "Sohag": {
     "حرج": {
       "avg_fatalities": 0.56,
       "avg_injuries": 14.99,
-      "avg_economic_loss_egp": 2573986.54,
-      "sample_size": 1318
-    },
-    "مرتفع": {
-      "avg_fatalities": 0.76,
-      "avg_injuries": 15.0,
-      "avg_economic_loss_egp": 1710941.36,
-      "sample_size": 45
+      "avg_economic_loss_egp": 2545492.75,
+      "sample_size": 1363
     }
   },
   "South Sinai": {
     "حرج": {
-      "avg_fatalities": 0.82,
-      "avg_injuries": 14.95,
-      "avg_economic_loss_egp": 1612645.12,
-      "sample_size": 192
-    },
-    "مرتفع": {
-      "avg_fatalities": 3.05,
-      "avg_injuries": 14.49,
-      "avg_economic_loss_egp": 1321334.36,
-      "sample_size": 73
+      "avg_fatalities": 1.43,
+      "avg_injuries": 14.83,
+      "avg_economic_loss_egp": 1532397.25,
+      "sample_size": 265
     }
   },
   "Suez": {
     "حرج": {
-      "avg_fatalities": 1.18,
-      "avg_injuries": 15.0,
-      "avg_economic_loss_egp": 1224064.52,
-      "sample_size": 253
+      "avg_fatalities": 1.61,
+      "avg_injuries": 14.94,
+      "avg_economic_loss_egp": 1223331.8,
+      "sample_size": 322
     },
     "متوسط": {
-      "avg_fatalities": 2.48,
-      "avg_injuries": 8.62,
-      "avg_economic_loss_egp": 1368029.14,
-      "sample_size": 29
+      "avg_fatalities": 0.0,
+      "avg_injuries": 0.0,
+      "avg_economic_loss_egp": 1375383.0,
+      "sample_size": 1
     },
     "مرتفع": {
-      "avg_fatalities": 2.73,
-      "avg_injuries": 14.75,
-      "avg_economic_loss_egp": 1210388.27,
-      "sample_size": 56
+      "avg_fatalities": 0.0,
+      "avg_injuries": 15.0,
+      "avg_economic_loss_egp": 1539163.75,
+      "sample_size": 4
+    },
+    "منخفض": {
+      "avg_fatalities": 0.55,
+      "avg_injuries": 0.0,
+      "avg_economic_loss_egp": 1427094.09,
+      "sample_size": 11
     }
   }
 }

@@ -14,6 +14,23 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 9
 main{padding:45px 0 80px}.section-head{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:22px}.section-head p{color:var(--muted);max-width:660px}.portal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}.portal{padding:25px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);position:relative;overflow:hidden}.portal:before{content:"";position:absolute;width:180px;height:180px;border-radius:50%;background:var(--blue);filter:blur(70px);opacity:.13;left:-70px;top:-70px}.portal-citizen{border-top:3px solid var(--cyan)}.portal-decision{border-top:3px solid var(--blue)}.portal-icon{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:var(--surface2);font-size:1.5rem;margin-bottom:15px}.portal h3{font-size:1.3rem}.portal p{color:var(--muted);font-size:.9rem}.feature-list{display:grid;gap:8px;margin:18px 0;color:var(--text);font-size:.86rem}.feature-list div:before{content:'✓';color:var(--green);font-weight:bold;margin-left:8px}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}.dashboard{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:15px}.kpi{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface2)}.kpi small{color:var(--muted);display:block}.kpi strong{display:block;font:800 1.5rem Cairo;margin-top:3px}.risk-list{display:grid;gap:10px}.risk-row{display:grid;grid-template-columns:30px 1fr 55px;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid var(--line)}.risk-row:last-child{border:0}.bar{height:7px;background:var(--surface2);border-radius:20px;margin-top:5px;overflow:hidden}.bar i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--cyan),var(--blue))}.score{font-weight:bold;color:var(--orange)}.split{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.field{margin-bottom:13px}.field label{display:block;color:var(--muted);font-size:.82rem;margin-bottom:5px}.field input,.field select,.field textarea{width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--line);border-radius:11px;padding:11px;outline:none}.field textarea{min-height:105px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue)}.result{padding:15px;background:var(--surface2);border-radius:15px;border:1px solid var(--line);margin-top:14px}.result strong{font-family:Cairo}.notice{padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--cyan) 10%,var(--surface));color:var(--muted);font-size:.84rem}.danger{color:var(--red)}
 .modal-backdrop{position:fixed;inset:0;background:#0009;z-index:50;display:grid;place-items:center;padding:18px}.modal{width:min(500px,100%);background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:25px;box-shadow:var(--shadow)}.modal-head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:18px}.close{background:transparent;border:0;color:var(--muted);font-size:1.5rem}.tabs{display:flex;background:var(--surface2);padding:4px;border-radius:13px;margin-bottom:18px}.tabs button{flex:1;border:0;background:transparent;color:var(--muted);padding:9px;border-radius:10px}.tabs button.active{background:var(--blue);color:#fff}.error{color:var(--red);font-size:.82rem;margin:8px 0}.user-chip{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted)}.user-chip b{color:var(--text)}footer{border-top:1px solid var(--line);padding:24px 0;color:var(--muted);font-size:.8rem}
 @media(max-width:800px){.portal-grid,.dashboard{grid-template-columns:1fr}.hero{min-height:560px;background-position:58% center}.hero-copy{padding:55px 0}.kpis{grid-template-columns:1fr 1fr}.section-head{display:block}}@media(max-width:480px){.wrap{width:calc(100% - 24px)}.kpis,.split{grid-template-columns:1fr}.nav .status{display:none}}
+
+.ai-assistant{margin-top:18px}.ai-box{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.ai-box textarea{min-height:90px}.ai-answer{white-space:pre-wrap;line-height:1.9}.ai-loading{opacity:.7}.ai-answer strong{font-family:Cairo}
+
+/* ===== EgyRoad IQ: ML + Complaint Review additions ===== */
+.ml-grid,.complaint-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.ml-card,.complaint-card{border:1px solid rgba(201,162,39,.25);border-radius:18px;padding:20px;background:rgba(255,255,255,.035)}
+.ml-card h3,.complaint-card h3{margin-top:0}
+.ml-result{margin-top:14px;padding:16px;border-radius:14px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);line-height:1.8}
+.risk-badge{display:inline-block;padding:5px 12px;border-radius:999px;font-weight:700}
+.risk-high{background:#fee2e2;color:#991b1b}.risk-medium{background:#fef3c7;color:#92400e}.risk-low{background:#dcfce7;color:#166534}
+.complaint-item{padding:16px;border:1px solid rgba(255,255,255,.09);border-radius:14px;margin-bottom:12px}
+.complaint-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:.9rem;opacity:.8;margin:8px 0}
+.complaint-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.status-pill{padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.08)}
+.empty-state{text-align:center;padding:28px;opacity:.7}
+@media(max-width:800px){.ml-grid,.complaint-layout{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -24,7 +41,53 @@ main{padding:45px 0 80px}.section-head{display:flex;justify-content:space-betwee
 <article class="portal portal-citizen"><div class="portal-icon">🧭</div><h3>واجهة المواطن</h3><p>مساعدة بسيطة قبل التحرك، وقناة مباشرة للإبلاغ عن حادث أو خطر على الطريق.</p><div class="feature-list"><div>رحلتي: تقييم الرحلة حسب الوقت والطقس</div><div>إبلاغ عن حادث مع صورة ووصف</div><div>متابعة حالة البلاغات بعد تسجيل الدخول</div></div><button class="btn primary" onclick="openAuth('citizen','login')">افتح مساحة المواطن</button></article>
 <article class="portal portal-decision"><div class="portal-icon">◈</div><h3>واجهة متخذ القرار</h3><p>لوحة هادئة تساعد المسؤول على رؤية الأولويات ومقارنة أثر التحسينات.</p><div class="feature-list"><div>أخطر الطرق داخل كل محافظة</div><div>سيناريو التحسين قبل وبعد التدخل</div><div>إدارة الحسابات المصرح لها فقط</div></div><button class="btn secondary" onclick="openAuth('decision','login')">افتح لوحة القرار</button></article>
 </div></section>
-<section id="citizenPanel" class="hidden"><div class="section-head"><div><h2>مساحة المواطن</h2><p>اختاري رحلتك أو ارفعي بلاغًا. المعلومات تقديرية وليست بديلًا عن تعليمات المرور والطوارئ.</p></div><button class="btn secondary" onclick="logout()">تسجيل الخروج</button></div><div class="dashboard"><div class="card"><h3>رحلتي</h3><p class="muted">احصلي على قراءة مختصرة لمستوى الخطورة قبل التحرك.</p><div class="split"><div class="field"><label>من</label><select id="from"><option>Cairo</option><option>Giza</option><option>Alexandria</option><option>Qalyubia</option><option>Beheira</option><option>Assiut</option></select></div><div class="field"><label>إلى</label><select id="to"><option>Alexandria</option><option>Cairo</option><option>Giza</option><option>Faiyum</option><option>Sohag</option><option>Qena</option></select></div></div><div class="split"><div class="field"><label>الساعة</label><input id="hour" type="number" min="0" max="23" value="18"></div><div class="field"><label>الطقس</label><select id="weather"><option value="clear">مستقر</option><option value="rain">مطر</option><option value="fog">شبورة</option><option value="dust">أتربة</option></select></div></div><button class="btn primary" onclick="predict()">حلّل الرحلة</button><div id="journeyResult" class="result hidden"></div></div><div class="card"><h3>إبلاغ عن حادث</h3><p class="muted">صفي ما حدث باختصار. البلاغ يظل قيد المراجعة حتى يتم التحقق منه.</p><div class="field"><label>المحافظة</label><input id="incidentGov" placeholder="مثال: القاهرة"></div><div class="field"><label>الطريق</label><input id="incidentRoad" placeholder="اسم الطريق أو أقرب علامة"></div><div class="field"><label>وصف مختصر</label><textarea id="incidentDesc" placeholder="ماذا حدث؟ وهل يوجد مصابون؟"></textarea></div><div class="field"><label>صورة اختيارية</label><input id="incidentImage" type="file" accept="image/*"></div><button class="btn primary" onclick="reportIncident()">إرسال البلاغ</button><div id="incidentResult" class="result hidden"></div></div></div></section>
+<section id="citizenPanel" class="hidden"><div class="section-head"><div><h2>مساحة المواطن</h2><p>اختاري رحلتك أو ارفعي بلاغًا. المعلومات تقديرية وليست بديلًا عن تعليمات المرور والطوارئ.</p></div><button class="btn secondary" onclick="logout()">تسجيل الخروج</button></div><div class="dashboard"><div class="card"><h3>رحلتي</h3><p class="muted">احصلي على قراءة مختصرة لمستوى الخطورة قبل التحرك.</p><div class="split"><div class="field"><label>من</label><select id="from"><option>Cairo</option><option>Giza</option><option>Alexandria</option><option>Qalyubia</option><option>Beheira</option><option>Assiut</option></select></div><div class="field"><label>إلى</label><select id="to"><option>Alexandria</option><option>Cairo</option><option>Giza</option><option>Faiyum</option><option>Sohag</option><option>Qena</option></select></div></div><div class="split"><div class="field"><label>الساعة</label><input id="hour" type="number" min="0" max="23" value="18"></div><div class="field"><label>الطقس</label><select id="weather"><option value="clear">مستقر</option><option value="rain">مطر</option><option value="fog">شبورة</option><option value="dust">أتربة</option></select></div></div><button class="btn primary" onclick="predict()">حلّل الرحلة</button><div id="journeyResult" class="result hidden"></div></div><div class="card"><h3>إبلاغ عن حادث</h3><p class="muted">صفي ما حدث باختصار. البلاغ يظل قيد المراجعة حتى يتم التحقق منه.</p><div class="field"><label>المحافظة</label><input id="incidentGov" placeholder="مثال: القاهرة"></div><div class="field"><label>الطريق</label><input id="incidentRoad" placeholder="اسم الطريق أو أقرب علامة"></div><div class="field"><label>وصف مختصر</label><textarea id="incidentDesc" placeholder="ماذا حدث؟ وهل يوجد مصابون؟"></textarea></div><div class="field"><label>صورة اختيارية</label><input id="incidentImage" type="file" accept="image/*"></div><button class="btn primary" onclick="reportIncident()">إرسال البلاغ</button>
+</div></div>
+<div class="ml-grid" style="margin-top:18px">
+  <div class="ml-card">
+    <h3>🧠 التنبؤ بمستوى الخطر</h3>
+    <p class="muted">النموذج يحول بيانات الرحلة إلى مستوى خطر يساعدك على اتخاذ قرار أكثر أمانًا.</p>
+    <div class="split">
+      <div class="field"><label>نوع الطريق</label><select id="mlRoadType"><option>Highway</option><option>Urban</option><option>Rural</option></select></div>
+      <div class="field"><label>الإضاءة</label><select id="mlLighting"><option>Daylight</option><option>Night</option><option>Street Light</option></select></div>
+    </div>
+    <div class="split">
+      <div class="field"><label>حالة الطريق</label><select id="mlSurface"><option>Dry</option><option>Wet</option><option>Poor</option></select></div>
+      <div class="field"><label>حزام الأمان</label><select id="mlSeatbelt"><option>Yes</option><option>No</option></select></div>
+    </div>
+    <button class="btn primary" onclick="runRiskModel()">احسب مستوى الخطر</button>
+    <div id="riskModelResult" class="ml-result hidden"></div>
+  </div>
+
+  <div class="ml-card">
+    <h3>🎯 تأثير الحادث والوقاية</h3>
+    <p class="muted">استخدمي النموذج لتقدير التأثير المتوقع ثم عرض إجراءات الوقاية المناسبة.</p>
+    <div class="split">
+      <div class="field"><label>نوع التصادم</label><select id="mlCollision"><option>Rear-end</option><option>Head-on</option><option>Side-impact</option><option>Rollover</option></select></div>
+      <div class="field"><label>نوع المركبة</label><select id="mlVehicle"><option>Car</option><option>Truck</option><option>Bus</option><option>Motorcycle</option></select></div>
+    </div>
+    <div class="split">
+      <div class="field"><label>السرعة التقريبية</label><input id="mlSpeed" type="number" min="0" max="200" value="80"></div>
+      <div class="field"><label>عدد المركبات</label><input id="mlVehicles" type="number" min="1" max="20" value="2"></div>
+    </div>
+    <button class="btn primary" onclick="runImpactModel()">حلّل التأثير</button>
+    <div id="impactModelResult" class="ml-result hidden"></div>
+  </div>
+</div>
+<div class="card" style="margin-top:18px">
+  <h3>💡 توصيات السلامة</h3>
+  <p class="muted">التوصيات تُبنى على عوامل الخطر المدخلة، وليست بديلًا عن تعليمات المرور والطوارئ.</p>
+  <div id="citizenRecommendations" class="feature-list">
+    <div>استخدمي «رحلتي» أو أحد النموذجين أعلاه لعرض توصيات مخصصة.</div>
+  </div>
+</div>
+<section id="complaintHistoryCard" class="card" style="margin-top:18px">
+  <h3>📋 بلاغاتي</h3>
+  <p class="muted">يمكنك متابعة البلاغات التي أرسلتِها وحالتها بعد المراجعة.</p>
+  <button class="btn soft" onclick="loadMyComplaints()">تحديث البلاغات</button>
+  <div id="myComplaints" style="margin-top:12px"></div>
+</section>
+</section>
 <section id="decisionPanel" class="hidden"><div class="section-head"><div><h2>لوحة متخذ القرار</h2><p>من البيانات إلى الأولوية: ابدئي بالطريق الأخطر ثم قارني أثر التدخل.</p></div><button class="btn secondary" onclick="logout()">تسجيل الخروج</button></div>
 <div class="dashboard" style="margin-bottom:18px">
 <div class="card"><h3>إدارة أعضاء الفريق</h3><p class="muted">أضيفي عضوًا جديدًا ومنحيه صلاحية الوصول إلى لوحة متخذ القرار.</p>
@@ -37,12 +100,45 @@ main{padding:45px 0 80px}.section-head{display:flex;justify-content:space-betwee
 <div class="field"><label>رابط Power BI أو التحليلات</label><input id="powerbiUrl" type="url" placeholder="https://app.powerbi.com/..."></div>
 <button class="btn primary" onclick="openAnalytics()">فتح التحليلات</button>
 <div class="notice" style="margin-top:12px">يمكنك إضافة Workbook/تقارير Power BI عبر الرابط، ويمكن أن يحتوي المشروع على 5 أو 6 Dashboards.</div></div>
-</div><div class="analytics-nav"><div class="analytics-card"><div class="portal-icon">📊</div><h3>التحليلات</h3><p class="muted">افتحي مساحة تحليلات Power BI لعرض 5 أو 6 لوحات معلومات.</p><button class="btn primary" onclick="openAnalyticsPage()">فتح التحليلات</button></div><div class="analytics-card"><div class="portal-icon">👥</div><h3>إدارة الأعضاء</h3><p class="muted">إضافة أعضاء مصرح لهم بالوصول إلى مساحة القرار.</p><button class="btn secondary" onclick="document.getElementById('memberName').focus()">إضافة عضو</button></div><div class="analytics-card"><div class="portal-icon">🔐</div><h3>حساب متخذ القرار</h3><p class="muted">الحساب الرئيسي: rofaida amr</p></div></div><div class="kpis"><div class="kpi"><small>إجمالي الحوادث المسجلة</small><strong id="totalAccidents">—</strong></div><div class="kpi"><small>الوفيات</small><strong id="totalFatalities">—</strong></div><div class="kpi"><small>الإصابات</small><strong id="totalInjuries">—</strong></div></div><div class="dashboard"><div class="card"><h3>أخطر الطرق حسب المحافظة</h3><div class="split"><div class="field"><label>اختاري المحافظة</label><select id="decisionGov"><option>Cairo</option><option>Giza</option><option>Alexandria</option><option>Dakahlia</option><option>Assiut</option><option>Luxor</option></select></div><div class="field"><label>أولوية العرض</label><select><option>الأعلى خطورة</option><option>الأكثر حوادث</option></select></div></div><button class="btn soft" onclick="loadRoads()">عرض الطرق</button><div id="roads" class="risk-list" style="margin-top:12px"></div></div><div class="card"><h3>سيناريو التحسين</h3><p class="muted">اختبري أثر تدخل مقترح. النتيجة تقديرية وتحتاج تقييمًا ميدانيًا.</p><div class="field"><label>الطريق</label><select id="scenarioRoad"></select></div><div class="field"><label>نوع التدخل</label><select id="factor"><option>كاميرات المراقبة</option><option>رادار سرعة</option><option>تحسين الإضاءة</option><option>حالة الرصف</option><option>زيادة الرقابة</option></select></div><div class="field"><label>نسبة التحسين المتوقعة: <b id="pctLabel">20%</b></label><input id="pct" type="range" min="0" max="100" value="20" oninput="pctLabel.innerText=this.value+'%' "></div><button class="btn primary" onclick="whatIf()">قارن قبل وبعد</button><div id="scenarioResult" class="result hidden"></div></div></div></section>
+</div><div class="analytics-nav"><div class="analytics-card"><div class="portal-icon">📊</div><h3>التحليلات</h3><p class="muted">افتحي مساحة تحليلات Power BI لعرض 5 أو 6 لوحات معلومات.</p><button class="btn primary" onclick="openAnalyticsPage()">فتح التحليلات</button></div><div class="analytics-card"><div class="portal-icon">👥</div><h3>إدارة الأعضاء</h3><p class="muted">إضافة أعضاء مصرح لهم بالوصول إلى مساحة القرار.</p><button class="btn secondary" onclick="document.getElementById('memberName').focus()">إضافة عضو</button></div><div class="analytics-card"><div class="portal-icon">🔐</div><h3>حساب متخذ القرار</h3><p class="muted">الحساب الرئيسي: rofaida amr</p></div></div><div class="kpis"><div class="kpi"><small>إجمالي الحوادث المسجلة</small><strong id="totalAccidents">—</strong></div><div class="kpi"><small>الوفيات</small><strong id="totalFatalities">—</strong></div><div class="kpi"><small>الإصابات</small><strong id="totalInjuries">—</strong></div></div><div class="dashboard"><div class="card"><h3>أخطر الطرق حسب المحافظة</h3><div class="split"><div class="field"><label>اختاري المحافظة</label><select id="decisionGov"><option>Cairo</option><option>Giza</option><option>Alexandria</option><option>Dakahlia</option><option>Assiut</option><option>Luxor</option></select></div><div class="field"><label>أولوية العرض</label><select><option>الأعلى خطورة</option><option>الأكثر حوادث</option></select></div></div><button class="btn soft" onclick="loadRoads()">عرض الطرق</button><div id="roads" class="risk-list" style="margin-top:12px"></div></div><div class="card"><h3>سيناريو التحسين</h3><p class="muted">اختبري أثر تدخل مقترح. النتيجة تقديرية وتحتاج تقييمًا ميدانيًا.</p><div class="field"><label>الطريق</label><select id="scenarioRoad"></select></div><div class="field"><label>نوع التدخل</label><select id="factor"><option>كاميرات المراقبة</option><option>رادار سرعة</option><option>تحسين الإضاءة</option><option>حالة الرصف</option><option>زيادة الرقابة</option></select></div><div class="field"><label>نسبة التحسين المتوقعة: <b id="pctLabel">20%</b></label><input id="pct" type="range" min="0" max="100" value="20" oninput="pctLabel.innerText=this.value+'%' "></div><button class="btn primary" onclick="whatIf()">قارن قبل وبعد</button><div id="scenarioResult" class="result hidden"></div></div></div>
+<div class="card" style="margin-top:18px">
+  <div class="section-head">
+    <div>
+      <h3>📨 مراجعة شكاوى وبلاغات المواطنين</h3>
+      <p class="muted">هنا تظهر البلاغات الواردة من واجهة المواطن. يمكن لمتخذ القرار مراجعة الوصف، تصنيف البلاغ، وتحديث حالته.</p>
+    </div>
+    <button class="btn soft" onclick="loadComplaints()">تحديث البلاغات</button>
+  </div>
+  <div class="complaint-layout">
+    <div>
+      <div class="field">
+        <label>فلترة الحالة</label>
+        <select id="complaintFilter" onchange="loadComplaints()">
+          <option value="all">كل البلاغات</option>
+          <option value="pending">قيد المراجعة</option>
+          <option value="verified">صحيح / تم التحقق</option>
+          <option value="false">بلاغ كاذب</option>
+          <option value="rejected">مرفوض</option>
+        </select>
+      </div>
+      <div id="complaintsList"></div>
+    </div>
+    <div class="complaint-card">
+      <h3>🤖 تصنيف البلاغ بالذكاء الاصطناعي</h3>
+      <p class="muted">التصنيف المقترح يساعد المسؤول فقط؛ القرار النهائي يظل بيد متخذ القرار بعد مراجعة الأدلة.</p>
+      <div class="notice">
+        <b>صادق / False</b> — التصنيف المقترح يمكن أن يعتمد على وصف البلاغ والصورة والبيانات المساندة عند توفرها.
+      </div>
+      <div id="complaintReviewResult" class="ml-result hidden"></div>
+    </div>
+  </div>
+</div>
+<div class="card ai-assistant"><h3>🤖 مساعد EgyRoad IQ الذكي</h3><p class="muted">اسألي Gemini عن بيانات الحوادث والطرق، وسيجيب اعتمادًا على بيانات ROADWISE المتاحة.</p><div class="ai-box"><div class="field"><label>سؤالك</label><textarea id="aiQuestion" placeholder="مثال: ما أكثر الطرق من حيث عدد الحوادث؟"></textarea></div><button class="btn primary" onclick="askAIAssistant()">اسأل المساعد</button></div><div id="aiAnswer" class="result hidden ai-answer"></div></div></section>
 <section id="analyticsPanel" class="analytics-page"><div class="section-head"><div><h2>تحليلات EgyRoad IQ</h2><p>مساحة مخصصة لعرض تقارير Power BI. الروابط مثبتة داخل كود الملف نفسه (DASHBOARD_LINKS)، فمش محتاجة تتكتب كل مرة — الحقول تحت دي بديل مؤقت لو حبيتي تجربي رابط جديد قبل ما تثبتيه في الكود.</p></div></div><button class="btn secondary back-btn" onclick="closeAnalyticsPage()">← العودة إلى لوحة القرار</button><div class="card"><h3>رابط Workbook / تقرير Power BI</h3><p class="muted">إذا كان لديك تقرير منشور على Power BI، ضعي رابط المشاركة/التضمين. ملف PBIX نفسه لا يعمل مباشرة داخل صفحة HTML.</p><div class="field"><label>الرابط الرئيسي</label><input id="mainPowerbiUrl" type="url" placeholder="https://app.powerbi.com/..." oninput="saveMainPowerbi()"></div><button class="btn primary" onclick="applyMainPowerbi()">عرض التقرير</button></div><div class="dash-grid" style="margin-top:18px"><div class="analytics-card"><h3>Dashboard 1</h3><p class="muted">لوحة تحليلات 1</p><div class="dash-slot" id="dash1"><div class="notice">ضعي رابط Dashboard 1 لعرضه هنا.</div></div><div class="field" style="margin-top:12px"><label>رابط Dashboard 1</label><input id="dashUrl1" type="url" placeholder="https://app.powerbi.com/..." oninput="saveDash(1)"></div><button class="btn soft" onclick="loadDash(1)">فتح Dashboard 1</button></div><div class="analytics-card"><h3>Dashboard 2</h3><p class="muted">لوحة تحليلات 2</p><div class="dash-slot" id="dash2"><div class="notice">ضعي رابط Dashboard 2 لعرضه هنا.</div></div><div class="field" style="margin-top:12px"><label>رابط Dashboard 2</label><input id="dashUrl2" type="url" placeholder="https://app.powerbi.com/..." oninput="saveDash(2)"></div><button class="btn soft" onclick="loadDash(2)">فتح Dashboard 2</button></div><div class="analytics-card"><h3>Dashboard 3</h3><p class="muted">لوحة تحليلات 3</p><div class="dash-slot" id="dash3"><div class="notice">ضعي رابط Dashboard 3 لعرضه هنا.</div></div><div class="field" style="margin-top:12px"><label>رابط Dashboard 3</label><input id="dashUrl3" type="url" placeholder="https://app.powerbi.com/..." oninput="saveDash(3)"></div><button class="btn soft" onclick="loadDash(3)">فتح Dashboard 3</button></div><div class="analytics-card"><h3>Dashboard 4</h3><p class="muted">لوحة تحليلات 4</p><div class="dash-slot" id="dash4"><div class="notice">ضعي رابط Dashboard 4 لعرضه هنا.</div></div><div class="field" style="margin-top:12px"><label>رابط Dashboard 4</label><input id="dashUrl4" type="url" placeholder="https://app.powerbi.com/..." oninput="saveDash(4)"></div><button class="btn soft" onclick="loadDash(4)">فتح Dashboard 4</button></div><div class="analytics-card"><h3>Dashboard 5</h3><p class="muted">لوحة تحليلات 5</p><div class="dash-slot" id="dash5"><div class="notice">ضعي رابط Dashboard 5 لعرضه هنا.</div></div><div class="field" style="margin-top:12px"><label>رابط Dashboard 5</label><input id="dashUrl5" type="url" placeholder="https://app.powerbi.com/..." oninput="saveDash(5)"></div><button class="btn soft" onclick="loadDash(5)">فتح Dashboard 5</button></div><div class="analytics-card"><h3>Dashboard 6</h3><p class="muted">لوحة تحليلات 6</p><div class="dash-slot" id="dash6"><div class="notice">ضعي رابط Dashboard 6 لعرضه هنا.</div></div><div class="field" style="margin-top:12px"><label>رابط Dashboard 6</label><input id="dashUrl6" type="url" placeholder="https://app.powerbi.com/..." oninput="saveDash(6)"></div><button class="btn soft" onclick="loadDash(6)">فتح Dashboard 6</button></div></div></section>
 </main><footer><div class="wrap">EgyRoad IQ — البيانات تساعدنا، والإنسان يظل صاحب القرار. في الحالات العاجلة اتصلي بالجهات المختصة.</div></footer>
 <div id="authModal" class="modal-backdrop hidden"><div class="modal"><div class="modal-head"><div><h3 id="authTitle">تسجيل الدخول</h3><p id="authSub" class="muted">ادخلي إلى مساحتك الآمنة.</p></div><button class="close" onclick="closeAuth()">×</button></div><div class="tabs"><button id="loginTab" class="active" onclick="setAuthMode('login')">دخول</button><button id="registerTab" onclick="setAuthMode('register')">إنشاء حساب مواطن</button></div><form id="authForm" onsubmit="submitAuth(event)"><div id="nameField" class="field hidden"><label>الاسم بالكامل</label><input id="authName"></div><div id="nidField" class="field hidden"><label>الرقم القومي</label><input id="authNid" inputmode="numeric" minlength="14" maxlength="14"></div><div class="field"><label>البريد الإلكتروني</label><input id="authEmail" type="email" required></div><div class="field"><label>كلمة المرور</label><input id="authPassword" type="password" minlength="6" required></div><div id="authError" class="error"></div><button class="btn primary" style="width:100%" id="authSubmit">دخول</button></form><div id="decisionNote" class="notice hidden" style="margin-top:14px">حسابات متخذي القرار يتم إنشاؤها من داخل الإدارة فقط. لا يوجد تسجيل عام لهذه الواجهة.</div></div></div>
 <script>
-const API=localStorage.getItem('roadwise_api_base')||'http://localhost:8000';let authRole='citizen',authMode='login',roadsCache=[];
+const API='http://localhost:8000';let authRole='citizen',authMode='login',roadsCache=[],excelData=[],excelDataLoaded=false;
 /* روابط لوحات Power BI ثابتة داخل الملف نفسه — اكتبيها هنا مرة واحدة وهتفضل شغالة لأي حد يفتح الملف، من غير ما متخذ القرار يحطها كل مرة */
 const DASHBOARD_LINKS={main:'',dash1:'',dash2:'',dash3:'',dash4:'',dash5:'',dash6:''};
 const demoRoads=[{Road_Name:'Regional Ring Road',risk_score:85.6,accidents:3086,fatalities:875,injuries:13062},{Road_Name:'Cairo-Alexandria Desert Road',risk_score:83.3,accidents:1970,fatalities:569,injuries:8110},{Road_Name:'Upper Egypt Eastern Desert Road',risk_score:92.7,accidents:3739,fatalities:1091,injuries:15820}];
@@ -52,11 +148,174 @@ function openAuth(role='citizen',mode='login'){authRole=role;authMode=mode;docum
 function setAuthMode(mode){authMode=mode;document.getElementById('loginTab').classList.toggle('active',mode==='login');document.getElementById('registerTab').classList.toggle('active',mode==='register');document.getElementById('registerTab').classList.toggle('hidden',authRole!=='citizen');document.getElementById('nameField').classList.toggle('hidden',mode!=='register');document.getElementById('nidField').classList.toggle('hidden',mode!=='register');document.getElementById('decisionNote').classList.toggle('hidden',authRole!=='decision');document.getElementById('authTitle').innerText=authRole==='decision'?'دخول متخذ القرار':mode==='register'?'إنشاء حساب مواطن':'دخول المواطن';document.getElementById('authSubmit').innerText=mode==='register'?'إنشاء الحساب':'دخول';document.getElementById('authError').innerText=''}
 async function submitAuth(e){e.preventDefault();const err=document.getElementById('authError');err.innerText='';const email=authEmail.value.trim(),password=authPassword.value;try{if(authRole==='decision'&&email.toLowerCase()==='rofaida.alqassas@gmail.com'&&password==='DIGI@2026'){const d={access_token:'local-demo-token',user:{name:'rofaida amr',email:'rofaida.alqassas@gmail.com',role:'decision'}};localStorage.setItem('roadwise_token',d.access_token);localStorage.setItem('roadwise_user',JSON.stringify(d.user));closeAuth();updateUser();showPanel('decision');return}let d;if(authMode==='register'){if(!/^\d{14}$/.test(authNid.value))throw Error('الرقم القومي يجب أن يتكون من 14 رقمًا');d=await api('/auth/register',{method:'POST',body:JSON.stringify({name:authName.value,email,password,national_id:authNid.value,role:'citizen'})})}else d=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password,role:authRole})});localStorage.setItem('roadwise_token',d.access_token);localStorage.setItem('roadwise_user',JSON.stringify(d.user));closeAuth();updateUser();showPanel(d.user.role)}catch(x){err.innerText=x.message}}
 function updateUser(){const u=user(),chip=document.getElementById('userChip');if(u){chip.classList.remove('hidden');chip.innerHTML=`مرحبًا، <b>${u.name||u.email}</b>`;authBtn.innerText='خروج';authBtn.onclick=logout}else{chip.classList.add('hidden');authBtn.innerText='تسجيل الدخول';authBtn.onclick=()=>openAuth('citizen','login')}}
-function showPanel(role){document.getElementById('portals').classList.add('hidden');document.getElementById('citizenPanel').classList.toggle('hidden',role!=='citizen');document.getElementById('decisionPanel').classList.toggle('hidden',role!=='decision'&&role!=='admin');if(role==='decision'||role==='admin'){loadStats();loadRoads()};scrollTo({top:document.getElementById(role==='citizen'?'citizenPanel':'decisionPanel').offsetTop-80,behavior:'smooth'})}
+function showPanel(role){document.getElementById('portals').classList.add('hidden');document.getElementById('citizenPanel').classList.toggle('hidden',role!=='citizen');document.getElementById('decisionPanel').classList.toggle('hidden',role!=='decision'&&role!=='admin');if(role==='decision'||role==='admin'){loadExcelData().catch(()=>{});loadStats().then(()=>loadRoads()).catch(()=>{});loadComplaints().catch(()=>{})}else if(role==='citizen'){loadMyComplaints().catch(()=>{})}scrollTo({top:document.getElementById(role==='citizen'?'citizenPanel':'decisionPanel').offsetTop-80,behavior:'smooth'})}
 function logout(){localStorage.removeItem('roadwise_token');localStorage.removeItem('roadwise_user');document.getElementById('portals').classList.remove('hidden');document.getElementById('citizenPanel').classList.add('hidden');document.getElementById('decisionPanel').classList.add('hidden');updateUser()}
 async function predict(){const box=document.getElementById('journeyResult');try{const d=await api('/predict',{method:'POST',body:JSON.stringify({governorates:[from.value,to.value],hour_24:Number(hour.value),weather:weather.value})});box.classList.remove('hidden');box.innerHTML=`<b>النتيجة: ${d.overall_score||d.risk_score}/100</b><br><span class="muted">مستوى الخطورة: ${d.overall_risk||'متوسط'} — هذه قراءة مساعدة وليست حكمًا نهائيًا.</span>`}catch(e){box.classList.remove('hidden');box.innerHTML='<span class="danger">تعذر الاتصال بالسيرفر.</span>'}}
-async function reportIncident(){const fd=new FormData();fd.append('governorate',incidentGov.value);fd.append('road_name',incidentRoad.value);fd.append('description',incidentDesc.value);if(incidentImage.files[0])fd.append('image',incidentImage.files[0]);const box=incidentResult;try{const d=await api('/report-incident',{method:'POST',body:fd});box.classList.remove('hidden');box.innerHTML=`<b>تم استلام البلاغ رقم ${d.incident_id}</b><br><span class="muted">حالته الآن: ${d.report_status||'قيد المراجعة'}</span>`}catch(e){box.classList.remove('hidden');box.innerHTML='<span class="danger">'+e.message+'</span>'}}
-async function loadStats(){try{const d=await api('/dashboard-stats');totalAccidents.innerText=(d.total_accidents||0).toLocaleString();totalFatalities.innerText=(d.total_fatalities||0).toLocaleString();totalInjuries.innerText=(d.total_injuries||0).toLocaleString();roadsCache=d.top_roads||[]}catch(e){roadsCache=demoRoads}}
+async function reportIncident(){
+ const fd=new FormData();
+ fd.append('governorate',incidentGov.value);
+ fd.append('road_name',incidentRoad.value);
+ fd.append('description',incidentDesc.value);
+ if(incidentImage.files[0])fd.append('image',incidentImage.files[0]);
+ const box=incidentResult;
+ try{
+   const d=await api('/report-incident',{method:'POST',body:fd});
+   const local=JSON.parse(localStorage.getItem('egyroad_my_complaints')||'[]');
+   local.unshift({incident_id:d.incident_id||('LOCAL-'+Date.now()),governorate:incidentGov.value,road_name:incidentRoad.value,description:incidentDesc.value,status:d.report_status||'pending',classification:'pending',created_at:new Date().toISOString()});
+   localStorage.setItem('egyroad_my_complaints',JSON.stringify(local));
+   box.classList.remove('hidden');
+   box.innerHTML=`<b>تم استلام البلاغ رقم ${d.incident_id||'—'}</b><br><span class="muted">حالته الآن: ${d.report_status||'قيد المراجعة'}</span>`;
+   incidentGov.value='';incidentRoad.value='';incidentDesc.value='';incidentImage.value='';
+   loadMyComplaints();
+ }catch(e){
+   box.classList.remove('hidden');
+   box.innerHTML='<span class="danger">'+e.message+'</span>';
+ }
+}
+
+function riskClass(level){
+ const x=String(level||'').toLowerCase();
+ if(x.includes('high')||x.includes('عالي')||x.includes('مرتفع'))return 'risk-high';
+ if(x.includes('low')||x.includes('منخفض'))return 'risk-low';
+ return 'risk-medium';
+}
+function showRecommendations(level, extra=''){
+ const box=document.getElementById('citizenRecommendations');
+ const high=String(level||'').toLowerCase().includes('high')||String(level||'').includes('عالي')||String(level||'').includes('مرتفع');
+ box.innerHTML=high
+ ? '<div>خفّضي السرعة، خصوصًا على الطرق السريعة.</div><div>استخدمي حزام الأمان دائمًا.</div><div>تجنبي القيادة عند انخفاض الرؤية أو سوء حالة الطريق.</div>'
+ : '<div>حافظي على سرعة مناسبة لمسار الطريق.</div><div>التزمي بحزام الأمان وقواعد المرور.</div>';
+ if(extra)box.innerHTML+='<div>'+extra+'</div>';
+}
+async function runRiskModel(){
+ const box=document.getElementById('riskModelResult'); box.classList.remove('hidden'); box.innerHTML='جاري تحليل عوامل الخطر...';
+ const payload={governorates:[from.value,to.value],hour_24:Number(hour.value),weather:weather.value,road_type:mlRoadType.value,lighting_condition:mlLighting.value,road_surface_condition:mlSurface.value,seatbelt:mlSeatbelt.value};
+ try{
+   const d=await api('/predict',{method:'POST',body:JSON.stringify(payload)});
+   const score=Number(d.overall_score??d.risk_score??0);
+   const level=d.overall_risk||d.risk_level||(score>=70?'High':score>=40?'Medium':'Low');
+   box.innerHTML=`<b>مستوى الخطر: <span class="risk-badge ${riskClass(level)}">${level}</span></b><br>درجة الخطر: <strong>${Math.round(score)}/100</strong>`;
+   showRecommendations(level);
+ }catch(e){
+   // Front-end fallback keeps the feature usable while the backend model is being connected.
+   let score=20+(Number(hour.value)>=20||Number(hour.value)<=5?20:0)+(mlSurface.value!=='Dry'?15:0)+(mlLighting.value==='Night'?10:0)+(mlSeatbelt.value==='No'?20:0);
+   score=Math.min(100,score);
+   const level=score>=70?'High':score>=40?'Medium':'Low';
+   box.innerHTML=`<b>قراءة أولية: <span class="risk-badge ${riskClass(level)}">${level}</span></b><br>درجة تقديرية: <strong>${score}/100</strong><br><span class="muted">للتنبؤ الرسمي يجب أن يكون نموذج الـAPI متاحًا.</span>`;
+   showRecommendations(level);
+ }
+}
+async function runImpactModel(){
+ const box=document.getElementById('impactModelResult'); box.classList.remove('hidden'); box.innerHTML='جاري تقدير التأثير...';
+ const payload={collision_type:mlCollision.value,vehicle_type:mlVehicle.value,speed:Number(mlSpeed.value),vehicles_involved:Number(mlVehicles.value)};
+ try{
+   const d=await api('/predict-impact',{method:'POST',body:JSON.stringify(payload)});
+   const score=Number(d.impact_score??d.risk_score??d.severity_score??0);
+   const level=d.impact_level||d.risk_level||d.severity||'Medium';
+   box.innerHTML=`<b>التأثير المتوقع: <span class="risk-badge ${riskClass(level)}">${level}</span></b><br>الدرجة: <strong>${Math.round(score)}/100</strong><br>${d.recommendation||'راجعي عوامل الخطر قبل اتخاذ القرار.'}`;
+   showRecommendations(level,d.recommendation||'');
+ }catch(e){
+   let score=Math.min(100,20+(Number(mlSpeed.value)>100?30:Number(mlSpeed.value)>80?15:5)+(mlCollision.value==='Head-on'?25:mlCollision.value==='Rollover'?20:10)+(Number(mlVehicles.value)>3?10:0));
+   const level=score>=70?'High':score>=40?'Medium':'Low';
+   box.innerHTML=`<b>تقدير التأثير: <span class="risk-badge ${riskClass(level)}">${level}</span></b><br>درجة تقديرية: <strong>${score}/100</strong><br><span class="muted">للتنبؤ الرسمي يجب توصيل Endpoint نموذج التأثير في الـAPI.</span>`;
+   showRecommendations(level);
+ }
+}
+function renderComplaint(item){
+ const id=item.incident_id||item.id||'—';
+ const status=item.status||item.report_status||'pending';
+ const cls=item.classification||item.ai_classification||'pending';
+ const label=cls==='false'?'بلاغ كاذب':cls==='verified'?'صحيح / تم التحقق':'قيد التصنيف';
+ return `<div class="complaint-item">
+   <b>بلاغ #${id}</b>
+   <div class="complaint-meta"><span>المحافظة: ${item.governorate||'—'}</span><span>الطريق: ${item.road_name||'—'}</span><span class="status-pill">الحالة: ${status}</span><span class="status-pill">AI: ${label}</span></div>
+   <p>${item.description||'لا يوجد وصف.'}</p>
+   <div class="complaint-actions">
+    <button class="btn soft" onclick="classifyComplaint('${String(id).replace(/'/g,"\\'")}')">🤖 صنّف البلاغ</button>
+    <button class="btn primary" onclick="reviewComplaint('${String(id).replace(/'/g,"\\'")}','verified')">✓ صحيح</button>
+    <button class="btn secondary" onclick="reviewComplaint('${String(id).replace(/'/g,"\\'")}','false')">✕ بلاغ كاذب</button>
+    <button class="btn secondary" onclick="reviewComplaint('${String(id).replace(/'/g,"\\'")}','rejected')">رفض</button>
+   </div>
+ </div>`;
+}
+async function getComplaintData(){
+ const endpoints=['/admin/complaints','/incidents','/api/incidents'];
+ for(const ep of endpoints){
+   try{const d=await api(ep);const arr=Array.isArray(d)?d:(d.data||d.incidents||d.reports||[]);if(Array.isArray(arr))return arr;}catch(e){}
+ }
+ return JSON.parse(localStorage.getItem('egyroad_my_complaints')||'[]');
+}
+async function loadComplaints(){
+ const box=document.getElementById('complaintsList'); if(!box)return;
+ box.innerHTML='<div class="empty-state">جاري تحميل البلاغات...</div>';
+ let arr=await getComplaintData();
+ const filter=document.getElementById('complaintFilter').value;
+ if(filter!=='all')arr=arr.filter(x=>(x.status||x.report_status||'pending')===filter||(x.classification||x.ai_classification||'pending')===filter);
+ box.innerHTML=arr.length?arr.map(renderComplaint).join(''):'<div class="empty-state">لا توجد بلاغات متاحة للمراجعة حاليًا.</div>';
+}
+async function classifyComplaint(id){
+ const box=document.getElementById('complaintReviewResult');box.classList.remove('hidden');box.innerHTML='جاري تصنيف البلاغ...';
+ try{
+   const d=await api('/classify-incident',{method:'POST',body:JSON.stringify({incident_id:id})});
+   box.innerHTML=`<b>التصنيف المقترح: ${d.classification||d.label||'غير محدد'}</b><br><span class="muted">${d.reason||d.explanation||'تم تحليل البلاغ.'}</span>`;
+   loadComplaints();
+ }catch(e){
+   box.innerHTML='<b>تعذر تشغيل نموذج التصنيف.</b><br><span class="muted">تأكدي من وجود Endpoint /classify-incident في الـFastAPI.</span>';
+ }
+}
+async function reviewComplaint(id,status){
+ const box=document.getElementById('complaintReviewResult');box.classList.remove('hidden');box.innerHTML='جاري حفظ قرار المراجعة...';
+ try{
+   const d=await api('/review-incident',{method:'POST',body:JSON.stringify({incident_id:id,status,classification:status==='false'?'false':'verified'})});
+   box.innerHTML=`<b>تم تحديث البلاغ #${id}</b><br><span class="muted">${d.message||'تم حفظ القرار بنجاح.'}</span>`;
+   loadComplaints();
+ }catch(e){
+   box.innerHTML='<span class="danger">تعذر حفظ المراجعة: '+e.message+'</span>';
+ }
+}
+async function loadMyComplaints(){
+ const box=document.getElementById('myComplaints');if(!box)return;
+ try{
+   const arr=await getComplaintData();
+   box.innerHTML=arr.length?arr.slice(0,10).map(x=>`<div class="complaint-item"><b>#${x.incident_id||x.id||'—'}</b> — ${x.governorate||'—'} / ${x.road_name||'—'}<br><span class="muted">الحالة: ${x.status||x.report_status||'قيد المراجعة'}</span></div>`).join(''):'<div class="empty-state">لم ترسلي بلاغات بعد.</div>';
+ }catch(e){box.innerHTML='<div class="empty-state">تعذر تحميل البلاغات.</div>'}
+}
+
+async function loadExcelData(){
+ try{
+  const d=await api('/api/data');
+  excelData=Array.isArray(d.data)?d.data:[];
+  excelDataLoaded=true;
+  console.log(`ROADWISE Excel loaded: ${excelData.length} records`, d.columns||[]);
+  return excelData;
+ }catch(e){
+  excelData=[];
+  excelDataLoaded=false;
+  console.error('ROADWISE Excel load failed:',e);
+  throw e;
+ }
+}
+async function loadStats(){
+ try{
+  const d=await api('/dashboard-stats');
+  totalAccidents.innerText=(d.total_accidents||0).toLocaleString();
+  totalFatalities.innerText=(d.total_fatalities||0).toLocaleString();
+  totalInjuries.innerText=(d.total_injuries||0).toLocaleString();
+  roadsCache=d.top_roads||[];
+ }catch(e){
+  console.error('Dashboard stats failed:',e);
+  roadsCache=[];
+  if(!excelDataLoaded){
+   try{await loadExcelData()}catch(_){}
+  }
+  // Calculate the headline totals directly from the real Excel records if the stats endpoint is unavailable.
+  if(excelData.length){
+   totalAccidents.innerText=excelData.length.toLocaleString();
+   totalFatalities.innerText=excelData.reduce((s,r)=>s+Number(r.Fatalities_Count||0),0).toLocaleString();
+   totalInjuries.innerText=excelData.reduce((s,r)=>s+Number(r.Injuries_Count||0),0).toLocaleString();
+  }
+ }
+}
 async function loadRoads(){if(!roadsCache.length)await loadStats();const gov=decisionGov.value;let list=roadsCache.filter(r=>(r.governorates||[]).includes(gov));if(!list.length)list=roadsCache.slice(0,5);list.sort((a,b)=>b.risk_score-a.risk_score);roads.innerHTML=list.map((r,i)=>`<div class="risk-row"><span>${i+1}</span><div><b>${r.Road_Name}</b><div class="bar"><i style="width:${r.risk_score}%"></i></div></div><span class="score">${Math.round(r.risk_score)}</span></div>`).join('');scenarioRoad.innerHTML=list.map(r=>`<option value="${r.Road_Name}">${r.Road_Name}</option>`).join('')}
 async function whatIf(){const box=scenarioResult;try{const d=await api('/what-if',{method:'POST',body:JSON.stringify({road_name:scenarioRoad.value,factor:factor.value,improvement_pct:Number(pct.value)})});box.classList.remove('hidden');box.innerHTML=`قبل التدخل: <strong>${Math.round(d.original_risk_score)}</strong> / 100<br>بعد التدخل: <strong style="color:var(--green)">${Math.round(d.estimated_new_risk_score)}</strong> / 100` }catch(e){box.classList.remove('hidden');box.innerHTML='<span class="danger">اختاري طريقًا مدعومًا من البيانات.</span>'}}
 async function addMember(){
@@ -90,5 +349,6 @@ function loadSavedAnalytics(){
   if(u)loadDash(i)
  }
 }
+async function askAIAssistant(){const q=document.getElementById('aiQuestion').value.trim(),box=document.getElementById('aiAnswer');if(!q){box.classList.remove('hidden');box.innerHTML='<span class="danger">اكتبي سؤالك أولًا.</span>';return}box.classList.remove('hidden');box.innerHTML='<span class="ai-loading">جاري تحليل البيانات والرد...</span>';try{const d=await api('/ai-assistant',{method:'POST',body:JSON.stringify({question:q})});box.innerHTML=d.success?(d.answer||'لم تصل إجابة من المساعد.'):'<span class="danger">تعذر الحصول على إجابة.</span>'}catch(e){box.innerHTML='<span class="danger">تعذر الاتصال بمساعد الذكاء الاصطناعي: '+e.message+'</span>'}}
 function setTheme(){const light=localStorage.getItem('roadwise_theme')==='light';document.documentElement.classList.toggle('light',light);themeBtn.innerText=light?'☾':'☼'}themeBtn.onclick=()=>{localStorage.setItem('roadwise_theme',document.documentElement.classList.contains('light')?'dark':'light');setTheme()};setTheme();updateUser();
 </script></body></html>

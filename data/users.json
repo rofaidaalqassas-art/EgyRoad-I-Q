@@ -16,5 +16,50 @@
     "password_hash": "e13d37bc0ac5cc6ae8ee4849b5eb36f1caf993c2f12a72c21dd86c2bd9f86bb2",
     "national_id": null,
     "created_at": "2026-09-08T09:12:48.832007+00:00"
+  },
+  "test@example.com": {
+    "name": "Test User",
+    "email": "test@example.com",
+    "role": "citizen",
+    "salt": "dc9ab57a04e10dd36ec3807542755331",
+    "password_hash": "2473124e4c8486899ba52bd6b12b78efe5a6554e36642bd58cd8a91088ab27f7",
+    "national_id": "11111111111111",
+    "created_at": "2026-09-08T13:29:04.793182+00:00"
+  },
+  "test2026@example.com": {
+    "name": "Test User",
+    "email": "test2026@example.com",
+    "role": "citizen",
+    "salt": "2b3fa27d638dc305a1d329162a1c1595",
+    "password_hash": "d0e3409c4ff096cf76f9ed30dfef6dfdfe164b9e482452a594a581e319f7361c",
+    "national_id": "11111111111111",
+    "created_at": "2026-09-08T13:29:45.862538+00:00"
+  },
+  "test1@GMAIL.COM": {
+    "name": "ASO",
+    "email": "test1@GMAIL.COM",
+    "role": "citizen",
+    "salt": "da9fe33979188c049fda4c62b503c010",
+    "password_hash": "70ab2846265e2f9c4e6dc96525a6acc3bd9dfc358dd0c76175831af27a4b3b11",
+    "national_id": "52454787187657",
+    "created_at": "2026-09-12T14:31:15.036301+00:00"
+  },
+  "test1@gmail.com": {
+    "name": "test",
+    "email": "test1@gmail.com",
+    "role": "citizen",
+    "salt": "da68ed467aa49ac611e1592413254935",
+    "password_hash": "6d1949ad1b61038f7bf04b57c133bb912615120003f12388931596b9a0378a67",
+    "national_id": "75234324535678",
+    "created_at": "2026-09-13T14:35:25.489070+00:00"
+  },
+  "TEST1@GMAIL.COM": {
+    "name": "TEST1",
+    "email": "TEST1@GMAIL.COM",
+    "role": "citizen",
+    "salt": "cc870908c4484a7cd7521713330b77ba",
+    "password_hash": "354168d247f52e3fe0f830b88109ed6ffe1f189a361503bd169d0b84c33cfe32",
+    "national_id": "34243812133600",
+    "created_at": "2026-09-13T15:59:13.330328+00:00"
   }
 }

@@ -85,7 +85,7 @@ class UserStore(JSONStore):
 
 
 class IncidentStore(JSONStore):
-    def create(self, governorate, road_name, description, image_path, reported_by):
+    def create(self, governorate, road_name, description, image_path, reported_by, image_verification=None):
         data = self._read()
         incident_id = f"INC-{len(data) + 1:06d}"
         record = {
@@ -95,6 +95,10 @@ class IncidentStore(JSONStore):
             "description": description,
             "image_path": image_path,
             "reported_by": reported_by,
+            # نتيجة فحص الصورة (image_verification.py) - قد تكون None لو
+            # مفيش صورة أصلاً في البلاغ. مش بتغيّر حالة "status" تلقائيًا،
+            # دي معلومة إضافية لعرضها في لوحة متخذ القرار.
+            "image_verification": image_verification,
             "status": "قيد المراجعة",
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
