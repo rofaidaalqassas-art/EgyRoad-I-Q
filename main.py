@@ -1067,3 +1067,6 @@ def _classify_report_text(description: str, governorate: str = "", road_name: st
 @app.post("/classify-complaint")
 def classify_complaint_endpoint(data: ComplaintClassificationRequest):
     return _classify_report_text(data.description, data.governorate, data.road_name)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8000)

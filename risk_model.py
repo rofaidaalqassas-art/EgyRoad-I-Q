@@ -50,8 +50,9 @@ FACTOR_TO_COMPONENT = {
     "تحسين الإضاءة": "night_unlit",
     "حالة الرصف": "poor_surface",
     "زيادة الرقابة": "enforcement",
-}
 
+    "Speed Reduction": "speeding",
+}
 
 # =========================================================
 # RISK COMPONENT WEIGHTS
@@ -1012,31 +1013,40 @@ class RiskModel:
         # Calculate new risk
         # -------------------------------------------------
 
-        new_score = 0.0
-
-        for key, weight in (
-            COMPONENT_WEIGHTS.items()
-        ):
-
-            try:
-
-                value = float(
-                    components.get(
-                        key,
-                        0.0,
-                    )
+        try:
+            original_score = float(
+                road.get(
+                    "risk_score",
+                    0.0,
                 )
-
-            except (
-                TypeError,
-                ValueError,
-            ):
-
-                value = 0.0
-
-            new_score += (
-                value * weight
             )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            original_score = 0.0
+
+        # Apply improvement according to the selected factor weight
+        if (
+            component_key
+            and component_key in COMPONENT_WEIGHTS
+        ):
+            factor_weight = COMPONENT_WEIGHTS[
+                component_key
+            ]
+
+            reduction = (
+                pct
+                * factor_weight
+                * 100.0
+            )
+
+            new_score = (
+                original_score
+                - reduction
+            )
+        else:
+            new_score = original_score
 
         new_score = max(
             0.0,
@@ -1045,24 +1055,6 @@ class RiskModel:
                 new_score,
             ),
         )
-
-        original_score = road.get(
-            "risk_score",
-            0.0,
-        )
-
-        try:
-
-            original_score = float(
-                original_score
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
-            original_score = 0.0
 
         return {
 
