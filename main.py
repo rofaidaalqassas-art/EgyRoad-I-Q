@@ -30,6 +30,7 @@ Endpoints الذكاء الاصطناعي الحقيقي:
 """
 
 import os
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
@@ -327,6 +328,39 @@ def roads(
     return risk_model.get_roads(governorate)
 
 
+_CLS_RANK = {"likely_false": 0, "needs_review": 1, "likely_valid": 2}
+
+
+def _combine_verification(text_result: Dict[str, Any], image_flag: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """يدمج تصنيف النص مع فحص الصورة في تصنيف نهائي واحد للبلاغ (Report
+    Verification)، بحرص شديد إن صورة "irrelevant" لوحدها ميقدرش يطلع منها
+    حكم "likely_false" - أقصى حاجة يعملها إنه يخفض الثقة لـ needs_review،
+    زي ما هو موضّح في image_verification.py. الصورة اللي بتثبت الحادث/الخطر
+    ("evidence_detected"/"hazard_detected") ممكن ترفع مستوى الثقة بحد أقصى
+    درجة واحدة فقط.
+    """
+    overall = text_result["classification"]
+
+    if image_flag:
+        img_status = image_flag.get("image_status")
+        if img_status in ("evidence_detected", "hazard_detected"):
+            # دعم إيجابي من الصورة -> نرفع درجة واحدة بحد أقصى
+            rank = min(_CLS_RANK[overall] + 1, 2)
+            overall = [k for k, v in _CLS_RANK.items() if v == rank][0]
+        elif img_status == "irrelevant":
+            # الصورة وحدها ميقدرش يطلع منها "likely_false" - أقصى تأثير
+            # سلبي إنه يوقف overall عند "needs_review" لو كان "likely_valid"
+            if overall == "likely_valid":
+                overall = "needs_review"
+
+    return {
+        "overall_classification": overall,
+        "overall_label_ar": _LABELS_AR[overall],
+        "text_verification": text_result,
+        "image_verification": image_flag,
+    }
+
+
 @app.post("/report-incident")
 async def report_incident(
     governorate: str = Form(...),
@@ -360,10 +394,16 @@ async def report_incident(
         )
         image_flag = image_report_flag(verification)
 
-    # ملاحظة: incidents.create لازم تدعم استقبال image_verification كـ
-    # حقل إضافي في السجل. لو ظهر خطأ هنا، معناه IncidentStore في storage.py
-    # عندك محتاج تعديل بسيط ليقبل **extra fields - ابعتيلي storage.py
-    # عشان أظبطه بالظبط بدل ما أخمّن شكله.
+    # تصنيف نص البلاغ بالتصنيف الثلاثي (likely_valid / needs_review /
+    # likely_false)، ثم دمجه مع فحص الصورة في حكم واحد نهائي متحفّظ.
+    text_result = _classify_report_text(description, governorate, road_name)
+    report_verification = _combine_verification(text_result, image_flag)
+
+    # ملاحظة: incidents.create لازم تدعم استقبال report_verification كـ
+    # حقل إضافي في السجل (زيادة عن image_verification اللي كانت موجودة).
+    # لو ظهر خطأ هنا، معناه IncidentStore في storage.py عندك محتاج تعديل
+    # بسيط ليقبل **extra fields - ابعتيلي storage.py عشان أظبطه بالظبط
+    # بدل ما أخمّن شكله.
     record = incidents.create(
         governorate=governorate,
         road_name=road_name,
@@ -371,13 +411,94 @@ async def report_incident(
         image_path=image_path,
         reported_by=user["sub"],
         image_verification=image_flag,
+        report_verification=report_verification,
     )
 
     return {
         "incident_id": record["id"],
         "report_status": record["status"],
         "image_verification": image_flag,
+        "report_verification": report_verification,
     }
+
+
+@app.get("/admin/complaints")
+def admin_complaints(user=Depends(get_current_user)):
+    """قائمة كل البلاغات - للوحة متخذ القرار فقط. الواجهة (EgyRoad_IQ.html)
+    بتنادي على الـendpoint ده بالاسم ده بالظبط."""
+    if user["role"] not in ("decision", "admin"):
+        raise HTTPException(status_code=403, detail="مسموح فقط لحسابات متخذي القرار")
+    return incidents.list_all()
+
+
+@app.get("/my-complaints")
+def my_complaints(user=Depends(get_current_user)):
+    """بلاغات المواطن نفسه فقط - بديل حقيقي لـlocalStorage، بيشتغل حتى لو
+    المواطن غيّر متصفح أو جهاز."""
+    return incidents.list_by_user(user["sub"])
+
+
+class ClassifyIncidentBody(BaseModel):
+    incident_id: str
+
+
+@app.post("/classify-incident")
+def classify_incident(body: ClassifyIncidentBody, user=Depends(get_current_user)):
+    """إعادة تشغيل Report Verification AI على بلاغ محفوظ فعليًا (بدل ما
+    ناخد نص خام زي /classify-complaint)، وتحديث السجل بأحدث تصنيف."""
+    if user["role"] not in ("decision", "admin"):
+        raise HTTPException(status_code=403, detail="مسموح فقط لحسابات متخذي القرار")
+
+    record = incidents.get(body.incident_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="البلاغ غير موجود")
+
+    text_result = _classify_report_text(
+        record.get("description", ""),
+        record.get("governorate", ""),
+        record.get("road_name", ""),
+    )
+    report_verification = _combine_verification(text_result, record.get("image_verification"))
+
+    incidents.update(
+        body.incident_id,
+        report_verification=report_verification,
+        classification=report_verification["overall_classification"],
+    )
+
+    return {
+        "classification": report_verification["overall_classification"],
+        "label": report_verification["overall_label_ar"],
+        "reason": text_result["reason"],
+        "confidence": text_result["confidence"],
+        "report_verification": report_verification,
+    }
+
+
+class ReviewIncidentBody(BaseModel):
+    incident_id: str
+    status: str
+    classification: Optional[str] = None
+
+
+@app.post("/review-incident")
+def review_incident(body: ReviewIncidentBody, user=Depends(get_current_user)):
+    """قرار المراجعة البشري النهائي (متخذ القرار) - ده اللي بيغيّر status
+    فعليًا، مش تصنيف الـAI لوحده."""
+    if user["role"] not in ("decision", "admin"):
+        raise HTTPException(status_code=403, detail="مسموح فقط لحسابات متخذي القرار")
+
+    record = incidents.get(body.incident_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="البلاغ غير موجود")
+
+    fields: Dict[str, Any] = {"status": body.status, "reviewed_by": user["sub"]}
+    if body.classification:
+        fields["classification"] = body.classification
+
+    updated = incidents.update(body.incident_id, **fields)
+
+    return {"message": "تم حفظ قرار المراجعة", "incident": updated}
 
 
 @app.post("/verify-image")
@@ -596,103 +717,96 @@ class ComplaintClassificationRequest(BaseModel):
     road_name: str = ""
 
 
-@app.post("/classify-complaint")
-def classify_complaint(data: ComplaintClassificationRequest):
-    try:
-        prompt = f"""
-أنت نظام ذكي لتحليل بلاغات حوادث ومخاطر الطرق في مصر.
+# تصنيفات "Report Verification AI" - مقصود إننا ما نطلعش حكم قاطع
+# True/False من غير دليل كافي. القيمة الافتراضية عند أي شك أو خطأ هي
+# "needs_review" دايمًا، مش "likely_false" - عشان ما نرفضش بلاغ حقيقي
+# غلط لمجرد إن التصنيف الآلي فشل أو مش متأكد.
+_LABELS_AR = {
+    "likely_valid": "يبدو صحيحًا",
+    "needs_review": "يحتاج مراجعة بشرية",
+    "likely_false": "يبدو غير صحيح / مشبوه",
+}
+
+
+def _classify_report_text(description: str, governorate: str = "", road_name: str = "") -> Dict[str, Any]:
+    """تصنيف نص البلاغ فقط (بدون الصورة) بالتصنيف الثلاثي. دالة داخلية
+    مستقلة عشان تُستخدم هنا وفي /report-incident كمان من غير تكرار كود."""
+    prompt = f"""
+أنت نظام ذكي لتحليل بلاغات حوادث ومخاطر الطرق في مصر، جزء من EgyRoad IQ.
 
 بيانات البلاغ:
 
 وصف البلاغ:
-{data.description}
+{description}
 
 المحافظة:
-{data.governorate}
+{governorate}
 
 الطريق:
-{data.road_name}
+{road_name}
 
-صنف البلاغ إلى تصنيف واحد فقط:
+صنّفي البلاغ إلى واحد من ثلاثة تصنيفات فقط - ممنوع الحكم القاطع
+(صحيح 100% أو كاذب 100%) بدون دليل كافٍ:
 
-موثوق
-غير صحيح
-يحتاج مراجعة
+likely_valid: البلاغ واضح ومنطقي ويتعلق بحادث أو خطر حقيقي على الطريق
+مثل حفرة، حادث، سيارة متعطلة، طريق مغلق، عمود ساقط، إشارة مرور تالفة،
+أو خطر مشابه، والتفاصيل متسقة مع بعضها.
 
-القواعد:
+likely_false: البلاغ لا علاقة له بالطرق أو المرور أو الحوادث، أو
+محتوى عبثي/غير منطقي، أو فيه تناقض واضح في التفاصيل.
 
-موثوق:
-إذا كان البلاغ واضحًا ومنطقيًا ويتعلق بحادث أو خطر حقيقي
-على الطريق مثل حفرة، حادث، سيارة متعطلة، طريق مغلق،
-عمود ساقط، إشارة مرور تالفة، أو خطر مشابه.
+needs_review: أي حالة تانية - المعلومات غير كافية للحكم، أو البلاغ
+معقول لكن ناقص تفاصيل تؤكده.
 
-غير صحيح:
-إذا كان البلاغ لا علاقة له بالطرق أو المرور أو الحوادث،
-أو كان واضحًا أنه محتوى عبثي.
+أرجعي النتيجة بهذا الشكل فقط:
 
-يحتاج مراجعة:
-إذا كانت المعلومات غير كافية للحكم.
-
-أرجع النتيجة بهذا الشكل فقط:
-
-classification: [موثوق أو غير صحيح أو يحتاج مراجعة]
+classification: [likely_valid أو likely_false أو needs_review]
 confidence: [رقم من 0 إلى 100]
 reason: [سبب مختصر باللغة العربية]
 
-لا تضف أي معلومات أخرى.
+لا تضيفي أي معلومات أخرى.
 """
 
+    try:
         answer = ask_gemini(prompt)
-
         text = answer.strip()
 
-        # القيمة الافتراضية
-        classification = "يحتاج مراجعة"
-
-        # نحدد التصنيف
-        if "غير صحيح" in text:
-            classification = "غير صحيح"
-        elif "موثوق" in text:
-            classification = "موثوق"
-        elif "يحتاج مراجعة" in text:
-            classification = "يحتاج مراجعة"
-
-        # استخراج confidence
-        import re
+        classification = "needs_review"
+        if re.search(r"likely_false", text, re.IGNORECASE):
+            classification = "likely_false"
+        elif re.search(r"likely_valid", text, re.IGNORECASE):
+            classification = "likely_valid"
+        elif re.search(r"needs_review", text, re.IGNORECASE):
+            classification = "needs_review"
 
         confidence = 0
-
-        match = re.search(
-            r"confidence\s*:\s*(\d+)",
-            text,
-            re.IGNORECASE
-        )
-
+        match = re.search(r"confidence\s*:\s*(\d+)", text, re.IGNORECASE)
         if match:
-            confidence = int(match.group(1))
+            confidence = max(0, min(100, int(match.group(1))))
 
-        # استخراج السبب
         reason = text
-
-        reason_match = re.search(
-            r"reason\s*:\s*(.*)",
-            text,
-            re.IGNORECASE | re.DOTALL
-        )
-
+        reason_match = re.search(r"reason\s*:\s*(.*)", text, re.IGNORECASE | re.DOTALL)
         if reason_match:
             reason = reason_match.group(1).strip()
 
         return {
             "classification": classification,
+            "classification_label_ar": _LABELS_AR[classification],
             "confidence": confidence,
-            "reason": reason
+            "reason": reason,
         }
 
     except Exception as e:
-
+        # أي فشل في الاتصال بالموديل -> needs_review دايمًا، مش likely_false،
+        # عشان الفشل التقني ما يترجمش لرفض بلاغ حقيقي.
         return {
-            "classification": "يحتاج مراجعة",
+            "classification": "needs_review",
+            "classification_label_ar": _LABELS_AR["needs_review"],
             "confidence": 0,
-            "reason": f"تعذر تحليل البلاغ آليًا: {str(e)}"
+            "reason": f"تعذر تحليل البلاغ آليًا: {str(e)}",
         }
+
+
+@app.post("/classify-complaint")
+def classify_complaint(data: ComplaintClassificationRequest):
+    return _classify_report_text(data.description, data.governorate, data.road_name)

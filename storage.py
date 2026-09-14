@@ -43,6 +43,8 @@ class UserStore(JSONStore):
         seed_accounts = [
             ("admin@roadwise.eg", "مسؤول التخطيط", "Admin@123"),
             ("rofaida.alqassas@gmail.com", "rofaida amr", "DIGI@2026"),
+            # حساب ديمو تاني لعرض لوحة متخذ القرار - نفس فكرة الحساب اللي فوق.
+            ("test1@gmail.com", "test1", "DIGI@2026"),
         ]
         changed = False
         for email, name, password in seed_accounts:
@@ -85,7 +87,8 @@ class UserStore(JSONStore):
 
 
 class IncidentStore(JSONStore):
-    def create(self, governorate, road_name, description, image_path, reported_by, image_verification=None):
+    def create(self, governorate, road_name, description, image_path, reported_by,
+               image_verification=None, report_verification=None):
         data = self._read()
         incident_id = f"INC-{len(data) + 1:06d}"
         record = {
@@ -99,7 +102,14 @@ class IncidentStore(JSONStore):
             # مفيش صورة أصلاً في البلاغ. مش بتغيّر حالة "status" تلقائيًا،
             # دي معلومة إضافية لعرضها في لوحة متخذ القرار.
             "image_verification": image_verification,
-            "status": "قيد المراجعة",
+            # الحكم المدمج (نص + صورة) من Report Verification AI - راجع
+            # main.py:_combine_verification. برضه مش بيغيّر status تلقائيًا؛
+            # القرار النهائي بيفضل لمتخذ القرار عن طريق /review-incident.
+            "report_verification": report_verification,
+            "classification": (report_verification or {}).get("overall_classification", "needs_review"),
+            # status بالإنجليزي (pending/verified/false/rejected) عشان يتوافق
+            # مباشرة مع فلتر الواجهة (complaintFilter) وأزرار المراجعة.
+            "status": "pending",
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         data[incident_id] = record
@@ -108,3 +118,20 @@ class IncidentStore(JSONStore):
 
     def list_all(self):
         return list(self._read().values())
+
+    def get(self, incident_id: str):
+        return self._read().get(incident_id)
+
+    def update(self, incident_id: str, **fields):
+        data = self._read()
+        record = data.get(incident_id)
+        if record is None:
+            return None
+        record.update(fields)
+        record["updated_at"] = datetime.now(timezone.utc).isoformat()
+        data[incident_id] = record
+        self._write(data)
+        return record
+
+    def list_by_user(self, reported_by: str):
+        return [r for r in self._read().values() if r.get("reported_by") == reported_by]
