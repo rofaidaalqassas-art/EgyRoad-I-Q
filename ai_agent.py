@@ -30,26 +30,27 @@ Total Injuries: {df["Injuries_Count"].sum()}
 Severity:
 {df["Severity_Level"].value_counts().to_string()}
 
-Top Governorates:
-{df["Governorate_EN"].value_counts().head(10).to_string()}
+Governorate Accident Counts:
+{df["Governorate_EN"].value_counts().to_string()}
 
-Top Roads:
-{df["Highway_Name"].value_counts().head(10).to_string()}
+Road Accident Counts:
+{df["Highway_Name"].value_counts().to_string()}
 
-Top Causes:
-{df["Cause_Category"].value_counts().head(10).to_string()}
+Cause Counts:
+{df["Cause_Category"].value_counts().to_string()}
 
-Collision Types:
-{df["Collision_Type"].value_counts().head(10).to_string()}
 
-Weather Conditions:
-{df["Weather_Condition"].value_counts().head(10).to_string()}
+Collision Type Counts:
+{df["Collision_Type"].value_counts().to_string()}
 
-Road Surface:
-{df["Road_Surface_Condition"].value_counts().head(10).to_string()}
+Weather Condition Counts:
+{df["Weather_Condition"].value_counts().to_string()}
 
-Lighting:
-{df["Lighting_Condition"].value_counts().head(10).to_string()}
+Road Surface Condition Counts:
+{df["Road_Surface_Condition"].value_counts().to_string()}
+
+Lighting Condition Counts:
+{df["Lighting_Condition"].value_counts().to_string()}
 
 Total Economic Loss:
 {df["Total_Economic_Loss_EGP"].sum()} EGP
