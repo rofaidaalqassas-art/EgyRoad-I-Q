@@ -20,7 +20,11 @@ def _hash_password(password: str, salt: str) -> str:
 class JSONStore:
     def __init__(self, path):
         self.path = path
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        # os.makedirs('') بيطلع FileNotFoundError - لو path من غير أي مجلد
+        # (زي "users.json" بس) هيبوظ. بنتجاهل إنشاء المجلد فى الحالة دي بس.
+        dirname = os.path.dirname(path)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
         if not os.path.exists(path):
             self._write({})
 
@@ -40,11 +44,21 @@ class UserStore(JSONStore):
 
     def _seed_demo_decision_account(self):
         data = self._read()
+        # القيم الافتراضية هنا هي نفس حسابات الديمو اللي كانت متسربة صريحةً
+        # فى الكود قبل كده. سيبناها كـ default عشان الديمو الحالي (والتسليم/
+        # التقييم) يفضل شغال زي ما هو من غير أي تغيير فى السلوك، لكن دلوقتي
+        # ممكن تستبدليها بمتغيرات بيئة حقيقية قبل ما ترفعي الكود على أي
+        # repo عام، من غير ما تلمسي الكود تاني:
+        #   ROADWISE_ADMIN_PASSWORD, ROADWISE_DECISION_PASSWORD,
+        #   ROADWISE_DECISION2_PASSWORD
         seed_accounts = [
-            ("admin@roadwise.eg", "مسؤول التخطيط", "Admin@123"),
-            ("rofaida.alqassas@gmail.com", "rofaida amr", "DIGI@2026"),
+            ("admin@roadwise.eg", "مسؤول التخطيط",
+             os.environ.get("ROADWISE_ADMIN_PASSWORD", "Admin@123")),
+            ("rofaida.alqassas@gmail.com", "rofaida amr",
+             os.environ.get("ROADWISE_DECISION_PASSWORD", "DIGI@2026")),
             # حساب ديمو تاني لعرض لوحة متخذ القرار - نفس فكرة الحساب اللي فوق.
-            ("test1@gmail.com", "test1", "DIGI@2026"),
+            ("test1@gmail.com", "test1",
+             os.environ.get("ROADWISE_DECISION2_PASSWORD", "DIGI@2026")),
         ]
         changed = False
         for email, name, password in seed_accounts:

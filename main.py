@@ -30,7 +30,6 @@ Endpoints الذكاء الاصطناعي الحقيقي:
 """
 
 import os
-import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
@@ -43,11 +42,22 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+# لازم تتحمّل قبل أي import من ai_agent/image_verification، لأن الملفين دول
+# بيعملوا genai.Client() وقت الـ import نفسه (module-level) - يعني بيدوروا
+# على GEMINI_API_KEY / GOOGLE_API_KEY في os.environ فورًا. لو load_dotenv()
+# اتنادت بعدهم أو متنادتش خالص، المفتاح المتخزّن في .env مش هيتلاقى، وهيرجع
+# نفس خطأ "API key not valid" حتى لو المفتاح نفسه صحيح فعليًا.
+#
+# محتاجة: pip install python-dotenv (لو لسه مش متثبتة) + ملف .env جنب
+# main.py فيه سطر GEMINI_API_KEY=...
+from dotenv import load_dotenv
+load_dotenv()
+
 from ai_model import CONTROLLABLE_FACTORS, AIModel
 from risk_model import RiskModel
 from storage import IncidentStore, UserStore
 
-from ai_agent import ask_gemini
+from ai_agent import answer_question, classify_complaint, load_roadwise_cache
 from image_verification import image_report_flag, verify_incident_image
 
 JWT_SECRET = os.environ.get("ROADWISE_JWT_SECRET", "change-this-secret-in-production")
@@ -58,9 +68,19 @@ UPLOADS_DIR = "uploads"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 app = FastAPI(title="EgyRoad IQ API")
+_FRONTEND_CANDIDATES = ["EgyRoad_IQ.html", "EgyRoad_IQ (1).html"]
+
 @app.get("/")
 def home():
-    return FileResponse("EgyRoad_IQ(1).html")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    for name in _FRONTEND_CANDIDATES:
+        path = os.path.join(base_dir, name)
+        if os.path.exists(path):
+            return FileResponse(path)
+    raise HTTPException(
+        status_code=500,
+        detail=f"ملف الواجهة غير موجود. لازم يكون أحد هذه الأسماء موجود جنب main.py: {_FRONTEND_CANDIDATES}",
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,6 +109,27 @@ def require_ai():
             detail="موديل الذكاء الاصطناعي لسه مش موجود. شغّلي train_model.py الأول.",
         )
     return ai_model
+
+
+# بيانات ROADWISE (accidents_data.xlsx) بتتحمّل مرة واحدة بس هنا عند
+# تشغيل السيرفر - مش مع كل سؤال زي كان بيحصل قبل كده. لو الملف مش موجود
+# وقت التشغيل، /ai-assistant هترجع خطأ واضح بدل ما السيرفر يقع بالكامل.
+try:
+    roadwise_cache = load_roadwise_cache()
+    ROADWISE_READY = True
+except Exception as e:
+    roadwise_cache = None
+    ROADWISE_READY = False
+    print(f"[WARN] تعذر تحميل بيانات ROADWISE عند التشغيل: {e}")
+
+
+def require_roadwise():
+    if not ROADWISE_READY:
+        raise HTTPException(
+            status_code=503,
+            detail="بيانات ROADWISE لسه مش محمّلة. تأكدي من وجود accidents_data.xlsx.",
+        )
+    return roadwise_cache
 
 
 class RegisterBody(BaseModel):
@@ -156,11 +197,17 @@ LOCAL_DEMO_TOKEN = "local-demo-token"
 LOCAL_DEMO_USER = {"sub": "rofaida.alqassas@gmail.com", "role": "decision", "name": "rofaida amr"}
 
 def get_current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    # Local development mode: endpoints work without forcing login.
+    LOCAL_DEV_MODE = True
+
+    if LOCAL_DEV_MODE and creds is None:
+        return LOCAL_DEMO_USER
+
+    if creds is not None and creds.credentials == LOCAL_DEMO_TOKEN:
+        return LOCAL_DEMO_USER
+
     if creds is None:
         raise HTTPException(status_code=401, detail="لازم تسجّلي الدخول الأول")
-
-    if creds.credentials == LOCAL_DEMO_TOKEN:
-        return LOCAL_DEMO_USER
 
     try:
         payload = jwt.decode(
@@ -277,6 +324,257 @@ def predict(body: PredictBody):
         body.hour_24,
         body.weather
     )
+
+
+# ============================================================
+# SMART JOURNEY — DATA-DRIVEN GOVERNORATE + ROAD
+# ============================================================
+_JOURNEY_DF = None
+_JOURNEY_RAW_STATS = None  # (low, high) لتطبيع raw index - راجع _load_journey_raw_stats
+
+def _load_journey_df():
+    global _JOURNEY_DF
+    if _JOURNEY_DF is not None:
+        return _JOURNEY_DF
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(base_dir, "accidents_data.xlsx"),
+        os.path.join(base_dir, "data", "accidents_data.xlsx"),
+        os.path.join(base_dir, "111.xlsx"),
+    ]
+    excel_path = next((p for p in candidates if os.path.exists(p)), None)
+    if not excel_path:
+        raise HTTPException(status_code=500, detail="ملف بيانات الحوادث غير موجود داخل المشروع.")
+    try:
+        df = pd.read_excel(excel_path, sheet_name="Accidents")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"تعذر قراءة بيانات الحوادث: {exc}")
+    required = ["Governorate_EN", "Highway_Name"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise HTTPException(status_code=500, detail=f"أعمدة البيانات المطلوبة غير موجودة: {missing}")
+    for c in ["Governorate_EN", "Highway_Name"]:
+        df[c] = df[c].fillna("").astype(str).str.strip()
+    for c in ["Fatalities_Count", "Injuries_Count"]:
+        if c not in df.columns:
+            df[c] = 0
+        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+    df = df[(df["Governorate_EN"] != "") & (df["Highway_Name"] != "")].copy()
+    _JOURNEY_DF = df
+    return df
+
+
+def _road_raw_index(rows) -> float:
+    """المؤشر الخام (raw) المشتق من نتائج الحوادث الفعلية لمجموعة صفوف
+    طريق واحد. نفس صيغة الحساب القديمة (فتلات/إصابات مرجّحة لكل حادثة) -
+    لسه مفيدة كترتيب نسبي بين الطرق، بس مش صالحة كـ0-100 مباشرة لأن
+    متوسط raw عبر كل الطرق فعليًا بيتخطى الـ100 (راجع التعليق فى
+    _load_journey_raw_stats تحت)."""
+    accidents = len(rows)
+    fatalities = rows["Fatalities_Count"].sum()
+    injuries = rows["Injuries_Count"].sum()
+    return ((fatalities * 5.0) + injuries) / max(accidents, 1) * 10.0
+
+
+def _load_journey_raw_stats():
+    """يحسب حدود التطبيع (5th/95th percentile) لمؤشر raw عبر كل الطرق
+    الفعلية فى الداتا، مرة واحدة بس، ونكاشها.
+
+    ليه مش زي القديم (min(100.0, raw))؟
+    لأن متوسط raw لأي طريق عادي (مش أخطر طريق) بيتخطى الـ100 أصلاً فى
+    الداتاست ده (متوسط وفيات/حادثة ≈ 0.79 ومتوسط إصابات/حادثة ≈ 8.4 ->
+    raw ≈ 124 حتى للمتوسط العام). القص الثابت عند 100 كان بيخلي كل
+    الطرق تقريبًا تطلع risk_score = 100 و"مرتفع جدًا"، من غير أي قدرة
+    فعلية على التمييز بين طريق خطير وطريق أقل خطورة.
+
+    الحل: بنحسب raw لكل طريق حقيقى فى الداتا مرة واحدة، وبعدين بنطبّع كل
+    طريق نسبةً للـ5th/95th percentile الفعليين (مش أقل/أعلى قيمة
+    بالظبط، عشان طريق واحد شاذ إحصائيًا ميضغطش باقي المقياس). النتيجة:
+    أخطر الطرق فعليًا تاخد قريب من 100، الأقل خطورة تاخد قريب من صفر،
+    والباقي يتوزع بينهم بمنطقية.
+    """
+    global _JOURNEY_RAW_STATS
+    if _JOURNEY_RAW_STATS is not None:
+        return _JOURNEY_RAW_STATS
+
+    df = _load_journey_df()
+    raws = [
+        _road_raw_index(rows)
+        for _, rows in df.groupby(["Governorate_EN", "Highway_Name"], sort=False)
+    ]
+
+    if not raws:
+        _JOURNEY_RAW_STATS = (0.0, 1.0)
+        return _JOURNEY_RAW_STATS
+
+    series = pd.Series(raws, dtype="float64")
+    low = float(series.quantile(0.05))
+    high = float(series.quantile(0.95))
+    if high - low < 1e-9:
+        high = low + 1e-9
+
+    _JOURNEY_RAW_STATS = (low, high)
+    return _JOURNEY_RAW_STATS
+
+
+def _road_metrics(df, governorate, road_name):
+    g = str(governorate).strip()
+    r = str(road_name).strip()
+    rows = df[(df["Governorate_EN"].str.casefold() == g.casefold()) &
+              (df["Highway_Name"].str.casefold() == r.casefold())]
+    if rows.empty:
+        return None
+    accidents = int(len(rows))
+    fatalities = int(rows["Fatalities_Count"].sum())
+    injuries = int(rows["Injuries_Count"].sum())
+
+    raw = _road_raw_index(rows)
+
+    # تطبيع نسبي (percentile-based) بدل القص الثابت القديم عند 100 -
+    # راجع _load_journey_raw_stats لشرح المشكلة والحل.
+    low, high = _load_journey_raw_stats()
+    normalized = (raw - low) / (high - low) * 100.0
+    risk_score = round(max(0.0, min(100.0, normalized)), 1)
+
+    if risk_score >= 75:
+        level = "مرتفع جدًا"
+    elif risk_score >= 55:
+        level = "مرتفع"
+    elif risk_score >= 35:
+        level = "متوسط"
+    else:
+        level = "منخفض"
+    return {
+        "governorate": g,
+        "road_name": r,
+        "risk_score": risk_score,
+        "risk_level": level,
+        "accidents": accidents,
+        "fatalities": fatalities,
+        "injuries": injuries,
+        "raw_index": round(raw, 2),
+    }
+
+
+class JourneyRequest(BaseModel):
+    governorate: str
+    road_name: str
+    hour_24: int
+    weather: str = "Clear"
+
+
+class JourneyOptionsResponse(BaseModel):
+    governorates: List[str]
+    roads_by_governorate: Dict[str, List[str]]
+
+
+@app.get("/journey-options", response_model=JourneyOptionsResponse)
+def journey_options():
+    df = _load_journey_df()
+    grouped = {}
+    for gov, g in df.groupby("Governorate_EN", sort=True):
+        roads = sorted(g["Highway_Name"].dropna().unique().tolist())
+        roads = [r for r in roads if r and r.lower() != "nan"]
+        if roads:
+            grouped[gov] = roads
+    return {"governorates": list(grouped.keys()), "roads_by_governorate": grouped}
+
+
+@app.post("/analyze-road-journey")
+def analyze_road_journey(body: JourneyRequest):
+    if not body.governorate.strip():
+        raise HTTPException(status_code=422, detail="اختاري المحافظة.")
+    if not body.road_name.strip():
+        raise HTTPException(status_code=422, detail="اختاري الطريق.")
+    if body.hour_24 < 0 or body.hour_24 > 23:
+        raise HTTPException(status_code=422, detail="الساعة يجب أن تكون بين 0 و23.")
+    df = _load_journey_df()
+    metrics = _road_metrics(df, body.governorate, body.road_name)
+    if metrics is None:
+        raise HTTPException(status_code=404, detail="الطريق المختار غير موجود داخل بيانات الحوادث لهذه المحافظة.")
+
+    # عامل الوقت/الطقس يأتي من RiskModel، بينما أرقام الطريق نفسها تأتي مباشرة من Excel.
+    try:
+        context = risk_model.predict_trip([metrics["governorate"]], body.hour_24, body.weather)
+        context_score = float(context.get("risk_score", metrics["risk_score"]))
+    except Exception:
+        context_score = metrics["risk_score"]
+
+    # نستخدم بيانات الطريق الفعلية كأساس، مع تعديل صغير فقط إذا كان سياق الوقت/الطقس أعلى.
+    final_score = round(min(100.0, max(metrics["risk_score"], context_score)), 1)
+    if final_score >= 75:
+        level = "مرتفع جدًا"
+    elif final_score >= 55:
+        level = "مرتفع"
+    elif final_score >= 35:
+        level = "متوسط"
+    else:
+        level = "منخفض"
+
+    return {
+        **metrics,
+        "risk_score": final_score,
+        "risk_level": level,
+        "hour_24": body.hour_24,
+        "weather": body.weather,
+        "source": "accidents_data.xlsx / Accidents",
+        "recommendation": (
+            "الطريق مرتفع الخطورة وفق نتائج الحوادث المسجلة؛ يفضّل خفض السرعة وتجنب الظروف الجوية السيئة."
+            if final_score >= 55
+            else "مستوى الخطورة أقل وفق بيانات الحوادث المسجلة، مع الالتزام بالسرعة الآمنة وتعليمات المرور."
+        ),
+    }
+
+
+@app.post("/best-route")
+def best_route(body: JourneyRequest):
+    # اختيار أقل Risk Score من الطرق الفعلية داخل المحافظة المختارة.
+    df = _load_journey_df()
+    gov = body.governorate.strip().casefold()
+    subset = df[df["Governorate_EN"].str.casefold() == gov]
+    if subset.empty:
+        raise HTTPException(status_code=404, detail="لا توجد محافظة بهذا الاسم في البيانات.")
+    options = []
+    for road in sorted(subset["Highway_Name"].unique()):
+        m = _road_metrics(df, body.governorate, road)
+        if m:
+            options.append(m)
+    options.sort(key=lambda x: x["risk_score"])
+    if not options:
+        raise HTTPException(status_code=404, detail="لا توجد طرق مدعومة في بيانات الحوادث لهذه المحافظة.")
+    best = options[0]
+    return {
+        "governorate": body.governorate,
+        "best_available_option": best,
+        "alternatives": options[:5],
+        "source": "accidents_data.xlsx / Accidents",
+        "note": "الاختيار مبني على أقل Risk Score من الطرق الفعلية المسجلة داخل المحافظة.",
+    }
+
+
+def _road_list_for_governorate(governorate):
+    """يبني قائمة بكل الطرق الفعلية المسجلة داخل محافظة معيّنة مع
+    risk_score محسوب لكل واحد منها.
+
+    ملحوظة: الدالة دي كانت متسخدمة فى /governorate-roads تحت من غير ما
+    تكون معرّفة فى أي مكان فى الملف - أي نداء على الـendpoint ده كان
+    هيطلع NameError دايمًا. تم تعريفها هنا بنفس منطق best_route."""
+    df = _load_journey_df()
+    gov = str(governorate).strip().casefold()
+    subset = df[df["Governorate_EN"].str.casefold() == gov]
+    roads = []
+    for road in sorted(subset["Highway_Name"].unique()):
+        m = _road_metrics(df, governorate, road)
+        if m:
+            roads.append(m)
+    return roads
+
+
+@app.get("/governorate-roads")
+def governorate_roads(governorate: str):
+    roads = _road_list_for_governorate(governorate)
+    roads = sorted(roads, key=lambda x: float(x.get("risk_score", 999)))
+    return {"governorate": governorate, "count": len(roads), "roads": roads}
 
 
 @app.post("/what-if")
@@ -594,6 +892,13 @@ def ai_feature_importance(top: int = 15):
     return model.feature_importance[:top]
 
 
+@app.get("/complaints")
+def complaints_alias(user=Depends(get_current_user)):
+    if user["role"] not in ("decision", "admin"):
+        raise HTTPException(status_code=403, detail="مسموح فقط لحسابات متخذي القرار")
+    return incidents.list_all()
+
+
 @app.get("/health")
 def health():
     return {
@@ -694,8 +999,9 @@ class AskAIRequest(BaseModel):
 
 @app.post("/ai-assistant")
 def ai_assistant(body: AskAIRequest):
+    cache = require_roadwise()
     try:
-        answer = ask_gemini(body.question)
+        answer = answer_question(body.question, cache)
 
         return {
             "success": True,
@@ -730,83 +1036,34 @@ _LABELS_AR = {
 
 def _classify_report_text(description: str, governorate: str = "", road_name: str = "") -> Dict[str, Any]:
     """تصنيف نص البلاغ فقط (بدون الصورة) بالتصنيف الثلاثي. دالة داخلية
-    مستقلة عشان تُستخدم هنا وفي /report-incident كمان من غير تكرار كود."""
-    prompt = f"""
-أنت نظام ذكي لتحليل بلاغات حوادث ومخاطر الطرق في مصر، جزء من EgyRoad IQ.
+    مستقلة عشان تُستخدم هنا وفي /report-incident كمان من غير تكرار كود.
 
-بيانات البلاغ:
-
-وصف البلاغ:
-{description}
-
-المحافظة:
-{governorate}
-
-الطريق:
-{road_name}
-
-صنّفي البلاغ إلى واحد من ثلاثة تصنيفات فقط - ممنوع الحكم القاطع
-(صحيح 100% أو كاذب 100%) بدون دليل كافٍ:
-
-likely_valid: البلاغ واضح ومنطقي ويتعلق بحادث أو خطر حقيقي على الطريق
-مثل حفرة، حادث، سيارة متعطلة، طريق مغلق، عمود ساقط، إشارة مرور تالفة،
-أو خطر مشابه، والتفاصيل متسقة مع بعضها.
-
-likely_false: البلاغ لا علاقة له بالطرق أو المرور أو الحوادث، أو
-محتوى عبثي/غير منطقي، أو فيه تناقض واضح في التفاصيل.
-
-needs_review: أي حالة تانية - المعلومات غير كافية للحكم، أو البلاغ
-معقول لكن ناقص تفاصيل تؤكده.
-
-أرجعي النتيجة بهذا الشكل فقط:
-
-classification: [likely_valid أو likely_false أو needs_review]
-confidence: [رقم من 0 إلى 100]
-reason: [سبب مختصر باللغة العربية]
-
-لا تضيفي أي معلومات أخرى.
-"""
-
+    ملحوظة مهمة: كانت الدالة دي قبل كده بتستخدم ask_gemini() - يعني كل
+    تصنيف بلاغ كان فعليًا بيحمّل بيانات ROADWISE بالكامل (get_roadwise_summary)
+    جوه برومبت "أجب عن سؤال متخذ القرار"، وبرومبت التصنيف ده كان بيتحط
+    جوه البرومبت الكبير ده. ده كان سبب أساسي في بطء تصنيف الشكاوى
+    ولاحتمال رجوع تصنيف غلط (بلاغ غير حقيقي يطلع "يبدو صحيحًا") بسبب
+    تلخبط الموديل بين تعليمات مختلفة. دلوقتي بتستخدم classify_complaint()
+    من ai_agent.py المستقلة تمامًا عن بيانات ROADWISE."""
     try:
-        answer = ask_gemini(prompt)
-        text = answer.strip()
-
-        classification = "needs_review"
-        if re.search(r"likely_false", text, re.IGNORECASE):
-            classification = "likely_false"
-        elif re.search(r"likely_valid", text, re.IGNORECASE):
-            classification = "likely_valid"
-        elif re.search(r"needs_review", text, re.IGNORECASE):
-            classification = "needs_review"
-
-        confidence = 0
-        match = re.search(r"confidence\s*:\s*(\d+)", text, re.IGNORECASE)
-        if match:
-            confidence = max(0, min(100, int(match.group(1))))
-
-        reason = text
-        reason_match = re.search(r"reason\s*:\s*(.*)", text, re.IGNORECASE | re.DOTALL)
-        if reason_match:
-            reason = reason_match.group(1).strip()
-
-        return {
-            "classification": classification,
-            "classification_label_ar": _LABELS_AR[classification],
-            "confidence": confidence,
-            "reason": reason,
-        }
-
+        result = classify_complaint(description, governorate, road_name)
     except Exception as e:
-        # أي فشل في الاتصال بالموديل -> needs_review دايمًا، مش likely_false،
-        # عشان الفشل التقني ما يترجمش لرفض بلاغ حقيقي.
-        return {
+        # أي فشل غير متوقع -> needs_review دايمًا، مش likely_false، عشان
+        # الفشل التقني ما يترجمش لرفض بلاغ حقيقي.
+        result = {
             "classification": "needs_review",
-            "classification_label_ar": _LABELS_AR["needs_review"],
             "confidence": 0,
             "reason": f"تعذر تحليل البلاغ آليًا: {str(e)}",
         }
 
+    return {
+        "classification": result["classification"],
+        "classification_label_ar": _LABELS_AR[result["classification"]],
+        "confidence": result["confidence"],
+        "reason": result["reason"],
+    }
+
 
 @app.post("/classify-complaint")
-def classify_complaint(data: ComplaintClassificationRequest):
+def classify_complaint_endpoint(data: ComplaintClassificationRequest):
     return _classify_report_text(data.description, data.governorate, data.road_name)

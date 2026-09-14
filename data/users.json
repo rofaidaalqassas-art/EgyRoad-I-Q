@@ -61,5 +61,14 @@
     "password_hash": "354168d247f52e3fe0f830b88109ed6ffe1f189a361503bd169d0b84c33cfe32",
     "national_id": "34243812133600",
     "created_at": "2026-09-13T15:59:13.330328+00:00"
+  },
+  "test@gmail.com": {
+    "name": "test",
+    "email": "test@gmail.com",
+    "role": "citizen",
+    "salt": "1e7ab02e448267d46d3ba955508dcb48",
+    "password_hash": "9bb29a957090cc25c9ec5f5730751137c1a056606843fa6443101ae98c27d6d9",
+    "national_id": "53453465436456",
+    "created_at": "2026-09-14T12:22:47.670219+00:00"
   }
 }

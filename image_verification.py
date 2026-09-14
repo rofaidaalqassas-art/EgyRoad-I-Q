@@ -1,38 +1,29 @@
+
+# -*- coding: utf-8 -*-
+
 """
 image_verification.py
-======================
-مرحلة "فحص الصورة" (Image Verification) لبلاغات المواطنين في EgyRoad IQ.
+=====================
 
-الفكرة:
-    قبل ما نعتمد أي بلاغ، لازم نتأكد أول حاجة إن الصورة المرفقة فعلاً
-    بتوثّق حادث/خطر مروري، مش صورة عشوائية. ده منفصل تمامًا عن تصنيف
-    نص البلاغ نفسه، والقرار ده بيتحدد هنا فقط بناءً على محتوى الصورة.
+مرحلة فحص الصورة (Image Verification) لبلاغات المواطنين
+في مشروع EgyRoad IQ.
 
-القرار الممكن للصورة (image_status):
-    - "evidence_detected"  -> صورة واضحة لحادث تصادم / سيارة متضررة
-    - "hazard_detected"    -> صورة لخطر على الطريق (عائق، حفرة، إشارة تالفة...)
-    - "irrelevant"         -> الصورة مالهاش علاقة بالمرور إطلاقًا
-    - "needs_review"       -> الصورة مش واضحة / الدليل غير كافٍ / فشل الفحص
+الوظيفة:
+- فحص الصورة باستخدام Gemini Vision.
+- تحديد هل الصورة:
+    evidence_detected
+    hazard_detected
+    irrelevant
+    needs_review
 
-قاعدة أساسية (مهمة جدًا):
-    ممنوع تمامًا إن الكود يوصف الصورة بـ "false" (بلاغ كاذب) لمجرد إنها
-    مش بتثبت الحادث. أقصى حكم سلبي ممكن نطلعه من فحص الصورة وحده هو
-    "irrelevant" أو "needs_review". أي حكم بـ "بلاغ كاذب" لازم ياخد في
-    الاعتبار عناصر تانية (نص البلاغ، الموقع، بلاغات مضادة...) مش الصورة
-    لوحدها، ولذلك مفيش دالة هنا بترجع "false" على الإطلاق.
+مهم:
+- هذا الملف لا يحكم أبدًا بأن البلاغ "false".
+- الصورة وحدها لا تكفي للحكم النهائي على البلاغ.
+- في حالة فشل Gemini أو عدم وضوح النتيجة:
+    needs_review
 
-ملاحظة توافق:
-    ده بيستخدم نفس مكتبة google-genai ونفس أسلوب genai.Client() المستخدم
-    في ai_agent.py بالظبط (client = genai.Client())، فمفتاح الـ API بياخده
-    تلقائيًا من نفس متغير البيئة اللي شغالة بيه بالفعل - مفيش حاجة تتغيّر
-    في إعدادات البيئة عندك.
-
-لا بيانات وهمية:
-    كل نتيجة هنا ناتجة عن استدعاء فعلي لموديل Gemini متعدد الوسائط
-    (نفس الموديل المستخدم في ai_agent.py افتراضيًا، أو موديل يدعم رؤية
-    الصور لو حددتِ واحد مختلف). لو مفيش مفتاح API، أو الاستدعاء فشل، أو
-    رد الموديل مش JSON صالح -> الدالة ترجع "needs_review" بشكل صريح مع
-    توضيح السبب، وأبدًا مش بتخترع نتيجة.
+المتطلبات:
+    pip install google-genai
 """
 
 from __future__ import annotations
@@ -40,20 +31,25 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
+
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-# ----------------------------------------------------
-# إعداد موديل Gemini - بنفس أسلوب ai_agent.py بالظبط
-# ----------------------------------------------------
-# ai_agent.py بيستخدم: from google import genai / client = genai.Client()
-# / client.models.generate_content(model="gemini-3.6-flash", contents=...)
-# فبنفس الطريقة هنا، عشان يشتغلوا بنفس المفتاح المُعد بالفعل في البيئة.
-#
-# ملحوظة: "gemini-3.6-flash" في ai_agent.py مستخدم لنص فقط. لو الموديل ده
-# مش بيدعم فهم الصور عندك، غيّري القيمة في متغير البيئة GEMINI_VISION_MODEL
-# لاسم موديل يدعم الرؤية (Vision) صراحة.
-VISION_MODEL_NAME = os.environ.get("GEMINI_VISION_MODEL", "gemini-3.6-flash")
+
+# =========================================================
+# GEMINI SETTINGS
+# =========================================================
+
+VISION_MODEL_NAME = os.environ.get(
+    "GEMINI_VISION_MODEL",
+    "gemini-3.6-flash",
+)
+
+
+# =========================================================
+# ALLOWED STATUSES
+# =========================================================
 
 _ALLOWED_STATUSES = {
     "evidence_detected",
@@ -62,196 +58,886 @@ _ALLOWED_STATUSES = {
     "needs_review",
 }
 
-_VERIFICATION_PROMPT = """
-انت جزء من نظام EgyRoad IQ لفحص بلاغات المواطنين عن حوادث/مخاطر الطرق في مصر.
-مهمتك الوحيدة: افحص الصورة المرفقة فقط (من غير أي معلومات تانية) وحدد تصنيفها.
 
-التصنيفات المسموح بيها فقط (لازم ترجع واحد منهم بالظبط في الحقل status):
-- "evidence_detected": الصورة بتوضح بشكل واضح حادث تصادم / سيارة متضررة أو منقلبة
-  بسبب حادث مروري.
-- "hazard_detected": الصورة بتوضح خطر على الطريق بدون حادث فعلي (عائق، حفرة كبيرة،
-  إشارة/عمود تالف، غرق شارع، ازدحام خطير...).
-- "irrelevant": الصورة مالهاش أي علاقة بالمرور أو الطرق (طعام، أشخاص، حيوانات،
-  screenshot غير متعلق، صورة عشوائية...).
-- "needs_review": الصورة غير واضحة (مظلمة/ضبابية/بعيدة جدًا)، أو ممكن تكون متعلقة
-  بالمرور لكن مش قادر تتأكد بثقة كافية، أو الملف مش صورة صالحة أصلاً.
+# =========================================================
+# VERIFICATION SETTINGS
+# =========================================================
+
+MAX_RETRIES = int(
+    os.environ.get(
+        "IMAGE_VERIFY_MAX_RETRIES",
+        "2",
+    )
+)
+
+RETRY_DELAY_SECONDS = float(
+    os.environ.get(
+        "IMAGE_VERIFY_RETRY_DELAY",
+        "1.5",
+    )
+)
+
+
+# أقل ثقة تجعلنا نحتاج مراجعة بشرية
+MIN_CONFIDENCE_NEEDS_REVIEW = 0.40
+
+
+# أقل ثقة لقبول evidence/hazard مباشرة
+MIN_CONFIDENCE_CONFIRMED = 0.65
+
+
+# =========================================================
+# GEMINI PROMPT
+# =========================================================
+
+_VERIFICATION_PROMPT = """
+أنت جزء من نظام EgyRoad IQ لفحص بلاغات المواطنين
+عن حوادث ومخاطر الطرق في مصر.
+
+مهمتك الوحيدة:
+افحص الصورة المرفقة فقط، بدون الاعتماد على أي معلومات
+خارج الصورة، وحدد تصنيف الصورة.
+
+التصنيفات المسموح بها فقط:
+
+1. "evidence_detected"
+
+الصورة توضح بشكل واضح:
+- حادث تصادم
+- سيارة متضررة بسبب حادث
+- سيارة منقلبة بسبب حادث مروري
+- آثار واضحة لحادث مروري
+
+2. "hazard_detected"
+
+الصورة توضح خطرًا على الطريق بدون ضرورة وجود حادث فعلي، مثل:
+- حفرة
+- عائق على الطريق
+- إشارة مرور تالفة
+- عمود أو لوحة تالفة
+- غرق أو تجمع مياه خطير
+- طريق متضرر
+- ازدحام أو وضع مروري خطير
+
+3. "irrelevant"
+
+الصورة ليس لها علاقة واضحة بالطرق أو المرور، مثل:
+- طعام
+- حيوانات
+- صورة شخصية
+- صورة عشوائية
+- Screenshot غير متعلق بالمرور
+- أي محتوى لا علاقة له بالطريق أو حادث أو خطر مروري
+
+4. "needs_review"
+
+استخدم هذا التصنيف عندما:
+- الصورة مظلمة جدًا
+- الصورة ضبابية
+- الصورة بعيدة جدًا
+- الصورة لا تسمح بالتأكد
+- محتوى الصورة قد يكون متعلقًا بالمرور ولكن الدليل غير كافٍ
+- الملف ليس صورة صالحة
+- لا تستطيع تحديد التصنيف بثقة كافية
 
 قواعد صارمة:
-1. لو مش متأكد بثقة كافية -> استخدم "needs_review" ولا تخمّن.
-2. لا تستخدم أبدًا كلمة "false" أو تحكم إن البلاغ كاذب - مش من مهمتك، فقط صنّف الصورة.
-3. رجّع إجابتك بصيغة JSON فقط بدون أي نص إضافي قبله أو بعده، بالشكل التالي بالظبط:
+
+- إذا كنت غير متأكد، استخدم needs_review.
+- لا تستخدم كلمة false إطلاقًا.
+- لا تحكم بأن البلاغ كاذب.
+- أنت تفحص الصورة فقط.
+- يجب أن تكون الإجابة JSON فقط بدون أي كلام إضافي.
+
+الشكل المطلوب:
 
 {
-  "status": "<one of: evidence_detected, hazard_detected, irrelevant, needs_review>",
-  "confidence": <رقم عشري بين 0 و 1>,
-  "reason": "<جملة قصيرة بالعربي توضح سبب القرار>"
+    "status": "evidence_detected",
+    "confidence": 0.95,
+    "reason": "الصورة توضح سيارة متضررة نتيجة حادث تصادم"
 }
+
+يجب أن يكون status واحدًا فقط من:
+
+evidence_detected
+hazard_detected
+irrelevant
+needs_review
+
+confidence يجب أن يكون رقمًا عشريًا بين 0 و 1.
+reason يجب أن تكون جملة قصيرة باللغة العربية.
 """
 
 
+# =========================================================
+# RESULT CLASS
+# =========================================================
+
 @dataclass
 class ImageVerificationResult:
+
     status: str
+
     confidence: float
+
     reason: str
-    raw_model_output: Optional[str] = field(default=None, repr=False)
+
+    raw_model_output: Optional[str] = field(
+        default=None,
+        repr=False,
+    )
+
     error: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+
         return {
             "status": self.status,
-            "confidence": self.confidence,
+            "confidence": round(
+                float(self.confidence),
+                2,
+            ),
             "reason": self.reason,
             "error": self.error,
         }
 
 
-def _needs_review(reason: str, raw: Optional[str] = None, error: Optional[str] = None) -> ImageVerificationResult:
-    """نقطة رجوع موحّدة: أي حالة غير متأكدة أو فشل -> needs_review بدل بيانات ملفّقة."""
+# =========================================================
+# NEEDS REVIEW HELPER
+# =========================================================
+
+def _needs_review(
+    reason: str,
+    raw: Optional[str] = None,
+    error: Optional[str] = None,
+) -> ImageVerificationResult:
+
     return ImageVerificationResult(
+
         status="needs_review",
+
         confidence=0.0,
+
         reason=reason,
+
         raw_model_output=raw,
+
         error=error,
     )
 
 
-def _extract_json_block(text: str) -> Optional[Dict[str, Any]]:
-    """يحاول يقرأ JSON من رد الموديل حتى لو حاطه جوه ```json ... ``` أو مع نص إضافي."""
+# =========================================================
+# JSON EXTRACTION
+# =========================================================
+
+def _extract_json_block(
+    text: str,
+) -> Optional[Dict[str, Any]]:
+
+    """
+    يحاول استخراج JSON من رد Gemini.
+
+    يدعم:
+    1. JSON مباشر.
+    2. JSON داخل ```json ... ```
+    3. JSON وسط نص إضافي.
+    """
+
+    if not text:
+
+        return None
+
+
     text = text.strip()
 
-    fenced = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, re.DOTALL)
-    if fenced:
-        text = fenced.group(1)
+
+    # -----------------------------------------------------
+    # إزالة Markdown code fence
+    # -----------------------------------------------------
+
+    fenced_match = re.search(
+        r"```(?:json)?\s*(\{.*?\})\s*```",
+        text,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+
+    if fenced_match:
+
+        text = fenced_match.group(1).strip()
+
+
+    # -----------------------------------------------------
+    # محاولة JSON مباشر
+    # -----------------------------------------------------
 
     try:
-        return json.loads(text)
+
+        parsed = json.loads(text)
+
+        if isinstance(parsed, dict):
+
+            return parsed
+
     except json.JSONDecodeError:
+
         pass
 
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return None
+
+    # -----------------------------------------------------
+    # البحث عن أول JSON object
+    # -----------------------------------------------------
+
+    start = text.find("{")
+
+    end = text.rfind("}")
+
+
+    if start == -1 or end == -1:
+
+        return None
+
+
+    if end <= start:
+
+        return None
+
+
+    json_text = text[
+        start:end + 1
+    ]
+
+
+    try:
+
+        parsed = json.loads(
+            json_text
+        )
+
+        if isinstance(parsed, dict):
+
+            return parsed
+
+    except json.JSONDecodeError:
+
+        return None
+
 
     return None
 
 
-def verify_incident_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> ImageVerificationResult:
+# =========================================================
+# CALL GEMINI ONCE
+# =========================================================
+
+def _call_vision_model_once(
+    image_bytes: bytes,
+    mime_type: str,
+) -> str:
+
     """
-    يفحص صورة بلاغ واحدة عن طريق نفس عميل Gemini المستخدم في ai_agent.py،
-    ويرجع ImageVerificationResult بدون أي بيانات وهمية.
-
-    Parameters
-    ----------
-    image_bytes: محتوى الصورة الخام (bytes)
-    mime_type:   نوع الملف، مثال "image/jpeg" أو "image/png"
+    استدعاء واحد فعلي لـ Gemini Vision.
     """
 
-    if not image_bytes:
-        return _needs_review("لم يتم استلام أي بيانات صورة صالحة للفحص")
+    from google import genai
+    from google.genai import types
 
-    try:
-        from google import genai
-        from google.genai import types
-    except ImportError:
-        return _needs_review(
-            "مكتبة google-genai غير مثبتة (pip install google-genai)"
+
+    client = genai.Client()
+
+
+    response = client.models.generate_content(
+
+        model=VISION_MODEL_NAME,
+
+        contents=[
+
+            _VERIFICATION_PROMPT,
+
+            types.Part.from_bytes(
+
+                data=image_bytes,
+
+                mime_type=mime_type,
+            ),
+
+        ],
+
+        config=types.GenerateContentConfig(
+
+            temperature=0,
+
+            max_output_tokens=256,
+        ),
+    )
+
+
+    text = getattr(
+        response,
+        "text",
+        None,
+    )
+
+
+    if text is None:
+
+        return ""
+
+
+    return str(text).strip()
+
+
+# =========================================================
+# GEMINI WITH RETRY
+# =========================================================
+
+def _call_vision_model_with_retry(
+    image_bytes: bytes,
+    mime_type: str,
+):
+
+    """
+    استدعاء Gemini مع Retry.
+
+    يرجع:
+
+        (raw_text, error)
+
+    """
+
+    last_error = None
+
+
+    total_attempts = (
+        MAX_RETRIES + 1
+    )
+
+
+    for attempt in range(
+        1,
+        total_attempts + 1,
+    ):
+
+        try:
+
+            raw_text = (
+                _call_vision_model_once(
+                    image_bytes,
+                    mime_type,
+                )
+            )
+
+
+            if raw_text:
+
+                return (
+                    raw_text,
+                    None,
+                )
+
+
+            last_error = (
+                "رد فارغ من موديل Gemini"
+            )
+
+
+        except Exception as e:
+
+            last_error = str(e)
+
+
+        # -------------------------------------------------
+        # Retry
+        # -------------------------------------------------
+
+        if attempt < total_attempts:
+
+            delay = (
+                RETRY_DELAY_SECONDS
+                * attempt
+            )
+
+            time.sleep(
+                delay
+            )
+
+
+    return (
+        None,
+        last_error,
+    )
+
+
+# =========================================================
+# PARSE GEMINI RESPONSE
+# =========================================================
+
+def _parse_verification_response(
+    raw_text: str,
+):
+
+    """
+    يحول رد Gemini إلى:
+
+        status
+        confidence
+        reason
+    """
+
+    parsed = _extract_json_block(
+        raw_text
+    )
+
+
+    if not parsed:
+
+        return (
+            None,
+            0.0,
+            "رد موديل فحص الصور لم يكن بصيغة JSON صالحة",
         )
 
-    try:
-        # نفس أسلوب ai_agent.py بالظبط: genai.Client() بياخد المفتاح
-        # تلقائيًا من متغيرات البيئة المُعدة بالفعل عندك.
-        client = genai.Client()
 
-        response = client.models.generate_content(
-            model=VISION_MODEL_NAME,
-            contents=[
-                _VERIFICATION_PROMPT,
-                types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-            ],
-            config=types.GenerateContentConfig(
-                temperature=0,
-                max_output_tokens=256,
+    status = str(
+        parsed.get(
+            "status",
+            "",
+        )
+    ).strip()
+
+
+    reason = str(
+        parsed.get(
+            "reason",
+            "",
+        )
+    ).strip()
+
+
+    if not reason:
+
+        reason = (
+            "بدون توضيح من الموديل"
+        )
+
+
+    try:
+
+        confidence = float(
+            parsed.get(
+                "confidence",
+                0,
+            )
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+
+        confidence = 0.0
+
+
+    confidence = max(
+        0.0,
+        min(
+            1.0,
+            confidence,
+        ),
+    )
+
+
+    if status not in _ALLOWED_STATUSES:
+
+        return (
+            None,
+            confidence,
+            (
+                "الموديل رجّع تصنيف "
+                f"غير معروف: {status!r}"
             ),
         )
 
-        raw_text = (response.text or "").strip()
 
-    except Exception as e:  # أي خطأ شبكة/API لا يتحول أبدًا لنتيجة ملفّقة
+    return (
+        status,
+        confidence,
+        reason,
+    )
+
+
+# =========================================================
+# MAIN IMAGE VERIFICATION FUNCTION
+# =========================================================
+
+def verify_incident_image(
+    image_bytes: bytes,
+    mime_type: str = "image/jpeg",
+) -> ImageVerificationResult:
+
+    """
+    فحص صورة بلاغ واحدة باستخدام Gemini Vision.
+
+    النتيجة الممكنة:
+
+        evidence_detected
+        hazard_detected
+        irrelevant
+        needs_review
+
+    لا يوجد false هنا إطلاقًا.
+    """
+
+
+    # -----------------------------------------------------
+    # 1. التأكد من وجود صورة
+    # -----------------------------------------------------
+
+    if not image_bytes:
+
         return _needs_review(
-            "تعذر الاتصال بموديل فحص الصور، يحتاج البلاغ مراجعة يدويًا",
-            error=str(e),
+            "لم يتم استلام أي بيانات صورة صالحة للفحص"
         )
 
-    parsed = _extract_json_block(raw_text)
 
-    if not parsed:
-        return _needs_review(
-            "رد موديل فحص الصور لم يكن بصيغة JSON صالحة",
-            raw=raw_text,
-        )
-
-    status = str(parsed.get("status", "")).strip()
-    reason = str(parsed.get("reason", "")).strip() or "بدون توضيح من الموديل"
+    # -----------------------------------------------------
+    # 2. التأكد من Google GenAI
+    # -----------------------------------------------------
 
     try:
-        confidence = float(parsed.get("confidence", 0))
-    except (TypeError, ValueError):
-        confidence = 0.0
 
-    confidence = max(0.0, min(1.0, confidence))
+        from google import genai  # noqa: F401
 
-    if status not in _ALLOWED_STATUSES:
+    except ImportError:
+
         return _needs_review(
-            f"الموديل رجّع تصنيف غير معروف ({status!r})، يحتاج مراجعة يدويًا",
+
+            "مكتبة google-genai غير مثبتة. "
+            "شغّلي: pip install google-genai"
+        )
+
+
+    # -----------------------------------------------------
+    # 3. الاتصال بـ Gemini
+    # -----------------------------------------------------
+
+    raw_text, error = (
+        _call_vision_model_with_retry(
+            image_bytes,
+            mime_type,
+        )
+    )
+
+
+    if raw_text is None:
+
+        return _needs_review(
+
+            "تعذر الاتصال بموديل فحص الصور "
+            "بعد عدة محاولات، يحتاج البلاغ مراجعة يدويًا",
+
+            error=error,
+        )
+
+
+    # -----------------------------------------------------
+    # 4. تحليل JSON
+    # -----------------------------------------------------
+
+    (
+        status,
+        confidence,
+        reason,
+    ) = _parse_verification_response(
+        raw_text
+    )
+
+
+    if status is None:
+
+        return _needs_review(
+
+            reason,
+
             raw=raw_text,
         )
 
-    if confidence < 0.4 and status != "needs_review":
+
+    # -----------------------------------------------------
+    # 5. ثقة منخفضة
+    # -----------------------------------------------------
+
+    if (
+
+        confidence
+        < MIN_CONFIDENCE_NEEDS_REVIEW
+
+        and status
+        != "needs_review"
+
+    ):
+
         return ImageVerificationResult(
+
             status="needs_review",
+
             confidence=confidence,
-            reason=f"ثقة الموديل منخفضة ({confidence:.2f}) على تصنيف '{status}', يحتاج مراجعة بشرية",
+
+            reason=(
+
+                "ثقة الموديل منخفضة "
+                f"({confidence:.2f}) "
+                f"على تصنيف '{status}'، "
+                "ويحتاج البلاغ مراجعة بشرية"
+
+            ),
+
             raw_model_output=raw_text,
         )
 
+
+    # -----------------------------------------------------
+    # 6. DOUBLE CHECK
+    # -----------------------------------------------------
+
+    if (
+
+        status
+        in (
+            "evidence_detected",
+            "hazard_detected",
+        )
+
+        and confidence
+        < MIN_CONFIDENCE_CONFIRMED
+
+    ):
+
+        (
+            second_raw,
+            second_error,
+        ) = (
+            _call_vision_model_with_retry(
+                image_bytes,
+                mime_type,
+            )
+        )
+
+
+        # -------------------------------------------------
+        # فشل الفحص الثاني
+        # -------------------------------------------------
+
+        if second_raw is None:
+
+            return ImageVerificationResult(
+
+                status="needs_review",
+
+                confidence=confidence,
+
+                reason=(
+
+                    f"التصنيف الأولي '{status}' "
+                    f"بثقة {confidence:.2f}، "
+                    "لكن فحص التأكيد الثاني فشل، "
+                    "لذلك يحتاج البلاغ مراجعة بشرية"
+
+                ),
+
+                raw_model_output=raw_text,
+
+                error=second_error,
+            )
+
+
+        # -------------------------------------------------
+        # تحليل الفحص الثاني
+        # -------------------------------------------------
+
+        (
+            second_status,
+            second_confidence,
+            second_reason,
+        ) = _parse_verification_response(
+            second_raw
+        )
+
+
+        # -------------------------------------------------
+        # الفحص الثاني غير صالح
+        # -------------------------------------------------
+
+        if second_status is None:
+
+            return ImageVerificationResult(
+
+                status="needs_review",
+
+                confidence=min(
+                    confidence,
+                    second_confidence,
+                ),
+
+                reason=(
+
+                    "تعذر تأكيد التصنيف "
+                    "في الفحص الثاني"
+
+                ),
+
+                raw_model_output=(
+
+                    f"{raw_text}\n"
+                    "---second_pass---\n"
+                    f"{second_raw}"
+
+                ),
+            )
+
+
+        # -------------------------------------------------
+        # هل الفحصان متفقان؟
+        # -------------------------------------------------
+
+        agrees = (
+
+            second_status == status
+
+            and
+
+            second_confidence
+            >= MIN_CONFIDENCE_NEEDS_REVIEW
+
+        )
+
+
+        if not agrees:
+
+            return ImageVerificationResult(
+
+                status="needs_review",
+
+                confidence=min(
+
+                    confidence,
+
+                    second_confidence,
+
+                ),
+
+                reason=(
+
+                    f"الفحص الأول رجّع "
+                    f"'{status}' "
+                    f"({confidence:.2f})، "
+
+                    f"والفحص الثاني رجّع "
+                    f"'{second_status}' "
+                    f"({second_confidence:.2f})، "
+
+                    "لذلك النتيجة تحتاج مراجعة بشرية"
+
+                ),
+
+                raw_model_output=(
+
+                    f"{raw_text}\n"
+                    "---second_pass---\n"
+                    f"{second_raw}"
+
+                ),
+            )
+
+
+        # -------------------------------------------------
+        # الفحصان متفقان
+        # -------------------------------------------------
+
+        confidence = (
+            second_confidence
+        )
+
+        reason = (
+            second_reason
+        )
+
+        raw_text = (
+
+            f"{raw_text}\n"
+            "---second_pass_confirmed---\n"
+            f"{second_raw}"
+
+        )
+
+
+    # -----------------------------------------------------
+    # 7. النتيجة النهائية
+    # -----------------------------------------------------
+
     return ImageVerificationResult(
+
         status=status,
+
         confidence=confidence,
+
         reason=reason,
+
         raw_model_output=raw_text,
     )
 
 
-# ----------------------------------------------------
-# دمج نتيجة الصورة مع باقي بيانات البلاغ لإصدار قرار أوّلي
-# ----------------------------------------------------
-# ملاحظة: هذه الدالة تحدد فقط "قرار المرحلة الأولى" الخاص بمرفق الصورة
-# ضمن البلاغ. القرار النهائي للبلاغ (Valid / Needs Review / False) لازم
-# يدمج كمان نتيجة تصنيف نص البلاغ نفسه (لو موجود عندكم موديل نص منفصل)
-# + بيانات الموقع/الوقت. الدمج الكامل مع تصنيف النص غير موجود في main.py
-# الحالي، فلو حابة نضيفه محتاجين كود موديل تصنيف النص عندكم.
+# =========================================================
+# IMAGE REPORT FLAG
+# =========================================================
 
-def image_report_flag(result: ImageVerificationResult) -> Dict[str, Any]:
+def image_report_flag(
+    result: ImageVerificationResult,
+) -> Dict[str, Any]:
+
     """
-    يحوّل نتيجة فحص الصورة إلى Flag واضح يُرفق مع سجل البلاغ في التخزين،
-    بدون أي حكم نهائي بـ "false" - القرار النهائي مسؤولية مرحلة تانية.
+    تحويل نتيجة فحص الصورة إلى Flag
+    يمكن تخزينه مع البلاغ.
+
+    لا يوجد هنا أي حكم نهائي بأن البلاغ false.
     """
 
     label_map = {
-        "evidence_detected": "✅ Evidence detected",
-        "hazard_detected": "⚠️ Road hazard detected",
-        "irrelevant": "❌ Irrelevant",
-        "needs_review": "🔎 Needs Review",
+
+        "evidence_detected":
+            "Evidence detected",
+
+        "hazard_detected":
+            "Road hazard detected",
+
+        "irrelevant":
+            "Irrelevant",
+
+        "needs_review":
+            "Needs Review",
     }
 
+
     return {
-        "image_status": result.status,
-        "image_label": label_map.get(result.status, "🔎 Needs Review"),
-        "image_confidence": round(result.confidence, 2),
-        "image_reason": result.reason,
+
+        "image_status":
+            result.status,
+
+        "image_label":
+            label_map.get(
+                result.status,
+                "Needs Review",
+            ),
+
+        "image_confidence":
+            round(
+                float(
+                    result.confidence
+                ),
+                2,
+            ),
+
+        "image_reason":
+            result.reason,
+
+        "image_error":
+            result.error,
     }
