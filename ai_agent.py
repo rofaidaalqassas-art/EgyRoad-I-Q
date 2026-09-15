@@ -233,7 +233,16 @@ def build_relevant_slice(question: str, cache: RoadwiseCache) -> str:
         parts.append("\nTop 5 Governorates:\n" + cache.governorate_counts.head(5).to_string())
         parts.append("\nTop 5 Causes:\n" + cache.cause_counts.head(5).to_string())
 
-    return "\n".join(parts)
+    result = "\n".join(parts)
+    # نطبع اسم المحافظة/الطريق اللي اتكشفوا (أو None) + البيانات اللي فعليًا
+    # هتتبعت لـ Gemini - عشان لو جاوب إجابة غلط، نشوف هل السبب إن الكشف
+    # فشل (governorate=None رغم إن السؤال فيه اسم محافظة)، أو إن البيانات
+    # وصلته صح لكنه اخترع رد مختلف عنها.
+    print(
+        f"[DEBUG] build_relevant_slice question={question!r} "
+        f"governorate={governorate!r} road={road!r} slice={result!r}"
+    )
+    return result
 
 
 # ==============================
