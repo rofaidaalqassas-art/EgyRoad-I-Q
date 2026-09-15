@@ -980,6 +980,15 @@ def ai_controllable_factors():
     ]
 
 
+@app.get("/ai/categorical-options")
+def ai_categorical_options():
+    """القيم الفئوية الرسمية المستخرجة من الموديلات نفسها وقت التشغيل
+    (راجع ML_Integration_Spec.md قسم 4) - كل الـ Dropdowns المرتبطة
+    بالموديل الحقيقي المفروض تتبني من هنا، مش من قيم مكتوبة يدوي."""
+    model = require_ai()
+    return model.categorical_options
+
+
 @app.get("/ai/feature-importance")
 def ai_feature_importance(top: int = 15):
     model = require_ai()

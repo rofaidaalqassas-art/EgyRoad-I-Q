@@ -199,6 +199,24 @@ async function runModel2(){
     box.innerHTML=`<b>Impact Score: ${Number(d.impact_score||0).toFixed(0)}/100</b><br>مستوى التأثير: <strong>${esc(d.impact_level||'—')}</strong><br>الإصابات المتوقعة: ${Number(d.predicted_injuries||0).toFixed(0)}<br>الوفيات المتوقعة: ${Number(d.predicted_fatalities||0).toFixed(0)}<br><span class="muted">${esc(d.recommendation||'')}</span>`;
   }catch(e){box.innerHTML='<span class="danger">تعذر تشغيل Model 2: '+esc(e.message)+'</span>'}
 }
+async function applyCategoricalOptions(){
+  const map={mlRoadType:'Road_Type',mlLighting:'Lighting_Condition',mlSurface:'Road_Surface_Condition',mlSeatbelt:'Seatbelt_Used',mlCollision:'Collision_Type',mlVehicle:'Vehicle_Category',m2Collision:'Collision_Type',m2Vehicle:'Vehicle_Category'};
+  try{
+    const opts=await api('/ai/categorical-options');
+    Object.keys(map).forEach(id=>{
+      const el=document.getElementById(id);const field=map[id];
+      const values=opts&&opts[field];
+      if(el&&Array.isArray(values)&&values.length){
+        const current=el.value;
+        el.innerHTML=values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+        if(values.includes(current))el.value=current;
+      }
+    });
+  }catch(e){
+    // موديل الذكاء الاصطناعي مش جاهز أو فشل الطلب - نسيب القيم المكتوبة موجودة في HTML زي ما هي بدل ما نكسر الواجهة.
+    console.warn('تعذر تحميل القيم الفئوية الحقيقية - مستخدمين القيم الافتراضية:',e);
+  }
+}
 let controllableFactorsList=[];
 async function loadControllableFactors(){
   const sel=document.getElementById('m3Factor');if(!sel)return;
@@ -274,5 +292,5 @@ function populateThreeModels(){
 }
 
 async function askAIAssistant(){const q=document.getElementById('aiQuestion').value.trim(),box=document.getElementById('aiAnswer');if(!q){box.classList.remove('hidden');box.innerHTML='<span class="danger">اكتبي سؤالك أولًا.</span>';return}box.classList.remove('hidden');box.innerHTML='<span class="ai-loading">جاري تحليل البيانات والرد...</span>';try{const d=await api('/ai-assistant',{method:'POST',body:JSON.stringify({question:q})});box.innerHTML=d.success?(d.answer||'لم تصل إجابة من المساعد.'):'<span class="danger">تعذر الحصول على إجابة.</span>'}catch(e){box.innerHTML='<span class="danger">تعذر الاتصال بمساعد الذكاء الاصطناعي: '+e.message+'</span>'}}
-function setTheme(){const light=localStorage.getItem('roadwise_theme')==='light';document.documentElement.classList.toggle('light',light);themeBtn.innerText=light?'☾':'☼'}themeBtn.onclick=()=>{localStorage.setItem('roadwise_theme',document.documentElement.classList.contains('light')?'dark':'light');setTheme()};setTheme();updateUser();loadJourneyOptions();populateThreeModels();loadControllableFactors();
+function setTheme(){const light=localStorage.getItem('roadwise_theme')==='light';document.documentElement.classList.toggle('light',light);themeBtn.innerText=light?'☾':'☼'}themeBtn.onclick=()=>{localStorage.setItem('roadwise_theme',document.documentElement.classList.contains('light')?'dark':'light');setTheme()};setTheme();updateUser();loadJourneyOptions();populateThreeModels();loadControllableFactors();applyCategoricalOptions();
 </script></body></html>

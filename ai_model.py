@@ -179,6 +179,26 @@ def risk_label(prob: float) -> str:
     return "حرج"
 
 
+def _get_learned_categories(pipeline) -> dict:
+    """يستخرج القائمة الرسمية للقيم الفئوية اللي الـ OneHotEncoder اتدرب
+    عليها فعليًا من داخل الـ Pipeline نفسه - مباشرة من ML_Integration_Spec.md
+    قسم 4. النتيجة: {اسم_العمود: [القيم المسموحة بالحرف]}. أي قيمة توصل من
+    الفرونت إند غير موجودة فى القوائم دي هتتجاهل بصمت (handle_unknown=
+    "ignore") من غير أي خطأ ظاهر - فالـ Dropdowns المفروض تتبني من هنا،
+    مش من قيم مكتوبة يدوي فى الكود."""
+    ohe = (
+        pipeline
+        .named_steps["preprocessor"]
+        .named_transformers_["categorical"]
+        .named_steps["onehot"]
+    )
+    cat_cols = pipeline.named_steps["preprocessor"].transformers_[1][2]
+    return {
+        col: [str(v) for v in categories]
+        for col, categories in zip(cat_cols, ohe.categories_)
+    }
+
+
 class AIModel:
 
     def __init__(self, artifacts_dir: str = ARTIFACTS_DIR):
@@ -244,6 +264,30 @@ class AIModel:
         self.global_outcome_avg = self._load_json(
             "global_outcome_avg.json"
         )
+
+        # القيم الفئوية الرسمية اللي الموديلات اتدربت عليها فعليًا - مستخرجة
+        # مباشرة من الـ Pipelines المحمّلة فوق، مش مكتوبة يدوي. أي قيمة
+        # توصل من الفرونت إند غير موجودة فى القوائم دي هتتجاهل بصمت من
+        # الـ OneHotEncoder (handle_unknown="ignore") من غير أي تنبيه ظاهر -
+        # فالـ Dropdowns المفروض تتبني من الحقل ده مباشرة، مش قيم يدوية.
+        self.categorical_options = {}
+        try:
+            # الموديلين (injuries/fatalities) بيشاركوا نفس الأعمدة الفئوية
+            # بالظبط (IMPACT_CATEGORICAL_FEATURES) - كفاية نستخرجهم من واحد
+            # بس، وده بيضيف Collision_Type اللي مش موجود فى موديل التصنيف.
+            # بنستخرجه الأول، وبعدين نسيب موديل التصنيف يغلب فى أي عمود
+            # مشترك بينهم (هو المرجع الأساسي لمعظم الـ Dropdowns فى الموقع).
+            self.categorical_options.update(
+                _get_learned_categories(self.injuries_model)
+            )
+        except Exception as e:
+            print(f"[WARN] تعذر استخراج القيم الفئوية من موديل الإصابات: {e}")
+        try:
+            self.categorical_options.update(
+                _get_learned_categories(self.classifier)
+            )
+        except Exception as e:
+            print(f"[WARN] تعذر استخراج القيم الفئوية من موديل التصنيف: {e}")
 
     def _load_json(self, filename):
 
