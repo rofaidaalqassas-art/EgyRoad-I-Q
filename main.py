@@ -1,86 +1,116 @@
 """
 main.py
 =======
-باك اند FastAPI لواجهة EgyRoad IQ.
-
-Endpoints المتاحة:
-    POST /auth/register
-    POST /auth/login
-    POST /predict               <- تقييم سريع بالمعادلة اليدوية (محافظة/ساعة/طقس)
-    POST /report-incident
-    GET  /dashboard-stats
-    GET  /roads
-    POST /what-if                <- سيناريو الطرق (المعادلة اليدوية)
-
-Endpoints الذكاء الاصطناعي الحقيقي:
-    POST /ai/predict              -> احتمالية الإصابة + مستوى الخطورة
-    POST /ai/report               -> التقرير الكامل
-    POST /ai/what-if               -> تجربة سيناريو بديل
-    GET  /ai/controllable-factors  -> العوامل القابلة للتحكم
-    GET  /ai/feature-importance    -> أهمية العوامل بشكل عام
-
-الأكواد المضافة حديثاً:
-    GET  /api/data                 -> جلب بيانات ملف الإكسيل الأساسي في المشروع
-
-تشغيل محلى:
-    pip install -r requirements.txt
-    python data_prep.py
-    python train_model.py
-    uvicorn main:app --reload --port 8000
+Backend FastAPI لواجهة EgyRoad IQ
 """
 
 import os
 import uuid
+import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import jwt
 import pandas as pd
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
 
-# لازم تتحمّل قبل أي import من ai_agent/image_verification، لأن الملفين دول
-# بيعملوا genai.Client() وقت الـ import نفسه (module-level) - يعني بيدوروا
-# على GEMINI_API_KEY / GOOGLE_API_KEY في os.environ فورًا. لو load_dotenv()
-# اتنادت بعدهم أو متنادتش خالص، المفتاح المتخزّن في .env مش هيتلاقى، وهيرجع
-# نفس خطأ "API key not valid" حتى لو المفتاح نفسه صحيح فعليًا.
-#
-# محتاجة: pip install python-dotenv (لو لسه مش متثبتة) + ملف .env جنب
-# main.py فيه سطر GEMINI_API_KEY=...
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+)
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+
+
+# ============================================================
+# ENVIRONMENT
+# ============================================================
+
 load_dotenv()
+
+
+# ============================================================
+# PROJECT IMPORTS
+# ============================================================
 
 from ai_model import CONTROLLABLE_FACTORS, AIModel
 from risk_model import RiskModel
 from storage import IncidentStore, UserStore
 
-from ai_agent import answer_question, classify_complaint, load_roadwise_cache
-from image_verification import image_report_flag, verify_incident_image
+from ai_agent import (
+    answer_question,
+    classify_complaint,
+    load_roadwise_cache,
+)
 
-JWT_SECRET = os.environ.get("ROADWISE_JWT_SECRET", "change-this-secret-in-production")
-JWT_ALGO = "HS256"
-JWT_EXPIRE_HOURS = 12
-UPLOADS_DIR = "uploads"
+from image_verification import (
+    image_report_flag,
+    verify_incident_image,
+)
+
+
+# ============================================================
+# PATHS / CONFIG
+# ============================================================
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
+DATA_DIR = os.path.join(BASE_DIR, "data")
 
 os.makedirs(UPLOADS_DIR, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
-app = FastAPI(title="EgyRoad IQ API")
-_FRONTEND_CANDIDATES = ["EgyRoad_IQ.html", "EgyRoad_IQ (1).html"]
+JWT_SECRET = os.environ.get(
+    "ROADWISE_JWT_SECRET",
+    "change-this-secret-in-production",
+)
 
-@app.get("/")
-def home():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    for name in _FRONTEND_CANDIDATES:
-        path = os.path.join(base_dir, name)
-        if os.path.exists(path):
-            return FileResponse(path)
-    raise HTTPException(
-        status_code=500,
-        detail=f"ملف الواجهة غير موجود. لازم يكون أحد هذه الأسماء موجود جنب main.py: {_FRONTEND_CANDIDATES}",
-    )
+JWT_ALGO = "HS256"
+JWT_EXPIRE_HOURS = 12
+
+LOCAL_DEMO_TOKEN = "local-demo-token"
+
+LOCAL_DEMO_MODE = (
+    os.environ.get(
+        "ROADWISE_LOCAL_DEMO_MODE",
+        "true",
+    ).strip().lower()
+    in ("1", "true", "yes", "on")
+)
+
+LOCAL_DEMO_USER = {
+    "sub": "rofaida.alqassas@gmail.com",
+    "role": "decision",
+    "name": "rofaida amr",
+}
+
+MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
+ALLOWED_IMAGE_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+
+
+# ============================================================
+# FASTAPI
+# ============================================================
+
+app = FastAPI(
+    title="EgyRoad IQ API",
+    version="1.1.0",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,48 +119,125 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-risk_model = RiskModel()
-users = UserStore("data/users.json")
-incidents = IncidentStore("data/incidents.json")
+
+_FRONTEND_CANDIDATES = [
+    "EgyRoad_IQ.html",
+    "EgyRoad_IQ (1).html",
+]
+
+
+# ============================================================
+# GLOBAL MODELS / STORES
+# ============================================================
+
+print("[START] Loading EgyRoad IQ backend...")
+
+
+try:
+    risk_model = RiskModel()
+    print("[OK] RiskModel loaded.")
+except Exception as e:
+    risk_model = None
+    print(f"[ERROR] RiskModel failed: {e}")
+
+
+users = UserStore(
+    os.path.join(
+        DATA_DIR,
+        "users.json",
+    )
+)
+
+incidents = IncidentStore(
+    os.path.join(
+        DATA_DIR,
+        "incidents.json",
+    )
+)
+
 security = HTTPBearer(auto_error=False)
+
 
 try:
     ai_model = AIModel()
     AI_READY = True
-except FileNotFoundError:
+    print("[OK] AIModel loaded successfully.")
+except Exception as e:
     ai_model = None
     AI_READY = False
+    print(f"[WARN] AI model unavailable: {e}")
+
+
+def require_risk_model():
+    if risk_model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Risk model غير متاح حاليًا.",
+        )
+
+    return risk_model
 
 
 def require_ai():
-    if not AI_READY:
+    if not AI_READY or ai_model is None:
         raise HTTPException(
             status_code=503,
-            detail="موديل الذكاء الاصطناعي لسه مش موجود. شغّلي train_model.py الأول.",
+            detail="موديل الذكاء الاصطناعي غير متاح حاليًا.",
         )
+
     return ai_model
 
 
-# بيانات ROADWISE (accidents_data.xlsx) بتتحمّل مرة واحدة بس هنا عند
-# تشغيل السيرفر - مش مع كل سؤال زي كان بيحصل قبل كده. لو الملف مش موجود
-# وقت التشغيل، /ai-assistant هترجع خطأ واضح بدل ما السيرفر يقع بالكامل.
+# ============================================================
+# ROADWISE CACHE
+# ============================================================
+
 try:
     roadwise_cache = load_roadwise_cache()
     ROADWISE_READY = True
+    print("[OK] ROADWISE cache loaded.")
 except Exception as e:
     roadwise_cache = None
     ROADWISE_READY = False
-    print(f"[WARN] تعذر تحميل بيانات ROADWISE عند التشغيل: {e}")
+    print(f"[WARN] ROADWISE cache failed: {e}")
 
 
 def require_roadwise():
     if not ROADWISE_READY:
         raise HTTPException(
             status_code=503,
-            detail="بيانات ROADWISE لسه مش محمّلة. تأكدي من وجود accidents_data.xlsx.",
+            detail="بيانات ROADWISE غير متاحة حاليًا.",
         )
+
     return roadwise_cache
 
+
+# ============================================================
+# FRONTEND
+# ============================================================
+
+@app.get("/")
+def home():
+
+    for name in _FRONTEND_CANDIDATES:
+
+        path = os.path.join(BASE_DIR, name)
+
+        if os.path.exists(path):
+            return FileResponse(path)
+
+    raise HTTPException(
+        status_code=500,
+        detail=(
+            "ملف الواجهة غير موجود. "
+            f"الأسماء المقبولة: {_FRONTEND_CANDIDATES}"
+        ),
+    )
+
+
+# ============================================================
+# PYDANTIC MODELS
+# ============================================================
 
 class RegisterBody(BaseModel):
     name: str
@@ -155,6 +262,7 @@ class PredictBody(BaseModel):
 class WhatIfBody(BaseModel):
     road_name: str
     factor: str
+    improvement_pct: Optional[float] = None
 
 
 class ScenarioBody(BaseModel):
@@ -167,88 +275,143 @@ class WhatIfAIBody(BaseModel):
 
 
 class ImpactBody(BaseModel):
-    """
-    بيانات بسيطة اللي واجهة "تقدير التأثير" (runImpactModel فى الـ HTML)
-    بترسلها فعليًا. أي فيتشر تانى من IMPACT_FEATURES مش موجود هنا بيتسيب
-    فاضي والـ Pipeline (imputer) هو اللي يتصرف فيه (median/most_frequent).
-    """
+
     collision_type: Optional[str] = None
     vehicle_type: Optional[str] = None
-    speed: Optional[float] = None
-    vehicles_involved: Optional[int] = None
-    # الحد الأقصى المسموح به - من غيره، Speed_Over_Limit_KMH وSpeed_Ratio
-    # (المشتقّان من الفرق بين السرعة والحد المسموح) كانوا بيفضلوا فاضيين
-    # دايمًا (راجع _add_impact_derived_features)، وده كان بيخلي الموديل
-    # شبه مش حساس لتغيير السرعة - لأن أهم فيتشرين مرتبطين بالسرعة
-    # كانوا أصلًا مش بيوصلوله.
-    posted_speed_limit: Optional[float] = None
-    # اختياري: لو الواجهة بعتت كمان أي فيتشرز تانية من IMPACT_FEATURES
-    # (زي المحافظة/الإضاءة/حالة الطريق من فورم "تقييم عوامل الخطر")، بتتمرر
-    # زي ما هي وتنضم لباقي السيناريو.
-    extra: Dict[str, Any] = {}
 
+    speed: Optional[float] = Field(
+        default=None,
+        ge=0,
+    )
+
+    vehicles_involved: Optional[int] = Field(
+        default=None,
+        ge=1,
+    )
+
+    posted_speed_limit: Optional[float] = Field(
+        default=None,
+        gt=0,
+    )
+
+    lighting: Optional[str] = None
+    road_surface: Optional[str] = None
+    weather: Optional[str] = None
+    road_name: Optional[str] = None
+
+    extra: Dict[str, Any] = Field(
+        default_factory=dict
+    )
+
+
+# ============================================================
+# AUTH
+# ============================================================
 
 def make_token(user: dict) -> str:
+
     payload = {
         "sub": user["email"],
         "role": user["role"],
         "name": user["name"],
-        "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_HOURS),
+        "exp": (
+            datetime.now(timezone.utc)
+            + timedelta(hours=JWT_EXPIRE_HOURS)
+        ),
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
+
+    return jwt.encode(
+        payload,
+        JWT_SECRET,
+        algorithm=JWT_ALGO,
+    )
 
 
-LOCAL_DEMO_TOKEN = "local-demo-token"
-LOCAL_DEMO_USER = {"sub": "rofaida.alqassas@gmail.com", "role": "decision", "name": "rofaida amr"}
+def get_current_user(
+    creds: Optional[
+        HTTPAuthorizationCredentials
+    ] = Depends(security),
+):
 
-def get_current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(security)):
-    # Local development mode: endpoints work without forcing login.
-    LOCAL_DEV_MODE = True
-
-    if LOCAL_DEV_MODE and creds is None:
-        return LOCAL_DEMO_USER
-
-    if creds is not None and creds.credentials == LOCAL_DEMO_TOKEN:
+    if (
+        LOCAL_DEMO_MODE
+        and creds is not None
+        and creds.credentials == LOCAL_DEMO_TOKEN
+    ):
         return LOCAL_DEMO_USER
 
     if creds is None:
-        raise HTTPException(status_code=401, detail="لازم تسجّلي الدخول الأول")
+
+        if LOCAL_DEMO_MODE:
+            return LOCAL_DEMO_USER
+
+        raise HTTPException(
+            status_code=401,
+            detail="يجب تسجيل الدخول أولًا.",
+        )
 
     try:
+
         payload = jwt.decode(
             creds.credentials,
             JWT_SECRET,
-            algorithms=[JWT_ALGO]
-        )
-    except jwt.PyJWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="جلسة الدخول غير صالحة، سجّلي الدخول تانى"
+            algorithms=[JWT_ALGO],
         )
 
-    return payload
+        return payload
+
+    except jwt.PyJWTError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="جلسة الدخول غير صالحة.",
+        )
 
 
 def _public_user(user: dict) -> dict:
+
     return {
         "name": user["name"],
         "email": user["email"],
-        "role": user["role"]
+        "role": user["role"],
     }
 
+
+def _require_decision_user(user: dict):
+
+    if user["role"] not in (
+        "decision",
+        "admin",
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="مسموح فقط لمتخذي القرار.",
+        )
+
+
+# ============================================================
+# AUTH ENDPOINTS
+# ============================================================
 
 @app.post("/auth/register")
 def register(
     body: RegisterBody,
-    creds: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    creds: Optional[
+        HTTPAuthorizationCredentials
+    ] = Depends(security),
 ):
+
     if users.get(body.email):
+
         raise HTTPException(
             status_code=409,
-            detail="البريد الإلكتروني مسجّل بالفعل"
+            detail="البريد الإلكتروني مسجّل بالفعل.",
         )
 
-    if body.role == "citizen":
+    role = body.role.strip().lower()
+
+    if role == "citizen":
+
         if not (
             body.national_id
             and body.national_id.isdigit()
@@ -256,7 +419,7 @@ def register(
         ):
             raise HTTPException(
                 status_code=400,
-                detail="الرقم القومي يجب أن يتكون من 14 رقمًا"
+                detail="الرقم القومي يجب أن يتكون من 14 رقمًا.",
             )
 
         user = users.create(
@@ -264,195 +427,347 @@ def register(
             email=body.email,
             password=body.password,
             role="citizen",
-            national_id=body.national_id
+            national_id=body.national_id,
         )
 
-    elif body.role in ("decision", "admin"):
+    elif role in ("decision", "admin"):
+
         current = get_current_user(creds)
 
-        if current["role"] not in ("decision", "admin"):
+        if current["role"] not in (
+            "decision",
+            "admin",
+        ):
             raise HTTPException(
                 status_code=403,
-                detail="مسموح فقط لأعضاء لوحة متخذ القرار بإضافة أعضاء جدد"
+                detail=(
+                    "مسموح فقط لمتخذي القرار أو المدير."
+                ),
             )
 
         user = users.create(
             name=body.name,
             email=body.email,
             password=body.password,
-            role=body.role,
-            national_id=None
+            role=role,
+            national_id=None,
         )
 
     else:
+
         raise HTTPException(
             status_code=400,
-            detail="نوع الحساب غير معروف"
+            detail="نوع الحساب غير معروف.",
         )
 
-    token = make_token(user)
-
     return {
-        "access_token": token,
-        "user": _public_user(user)
+        "access_token": make_token(user),
+        "user": _public_user(user),
     }
 
 
 @app.post("/auth/login")
 def login(body: LoginBody):
+
     user = users.get(body.email)
 
-    if not user or not users.verify_password(user, body.password):
+    if (
+        not user
+        or not users.verify_password(
+            user,
+            body.password,
+        )
+    ):
+
         raise HTTPException(
             status_code=401,
-            detail="البريد الإلكتروني أو كلمة المرور غير صحيحة"
+            detail=(
+                "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+            ),
         )
 
     if user["role"] != body.role:
+
         raise HTTPException(
             status_code=403,
-            detail="هذا الحساب غير مسجّل بهذه الصلاحية"
+            detail=(
+                "هذا الحساب غير مسجّل بهذه الصلاحية."
+            ),
         )
 
-    token = make_token(user)
-
     return {
-        "access_token": token,
-        "user": _public_user(user)
+        "access_token": make_token(user),
+        "user": _public_user(user),
     }
 
 
+# ============================================================
+# BASIC PREDICT
+# ============================================================
+
 @app.post("/predict")
 def predict(body: PredictBody):
-    return risk_model.predict_trip(
+
+    model = require_risk_model()
+
+    if not 0 <= body.hour_24 <= 23:
+
+        raise HTTPException(
+            status_code=422,
+            detail="الساعة يجب أن تكون بين 0 و23.",
+        )
+
+    return model.predict_trip(
         body.governorates,
         body.hour_24,
-        body.weather
+        body.weather,
     )
 
 
 # ============================================================
-# SMART JOURNEY — DATA-DRIVEN GOVERNORATE + ROAD
+# JOURNEY DATA
 # ============================================================
+
 _JOURNEY_DF = None
-_JOURNEY_RAW_STATS = None  # (low, high) لتطبيع raw index - راجع _load_journey_raw_stats
+_JOURNEY_RAW_STATS = None
+_JOURNEY_METRICS_CACHE = None
+
+
+def _find_excel_path():
+
+    candidates = [
+        os.path.join(
+            BASE_DIR,
+            "accidents_data.xlsx",
+        ),
+        os.path.join(
+            DATA_DIR,
+            "accidents_data.xlsx",
+        ),
+        os.path.join(
+            BASE_DIR,
+            "111.xlsx",
+        ),
+    ]
+
+    return next(
+        (
+            p
+            for p in candidates
+            if os.path.exists(p)
+        ),
+        None,
+    )
+
 
 def _load_journey_df():
+
     global _JOURNEY_DF
+
     if _JOURNEY_DF is not None:
         return _JOURNEY_DF
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    candidates = [
-        os.path.join(base_dir, "accidents_data.xlsx"),
-        os.path.join(base_dir, "data", "accidents_data.xlsx"),
-        os.path.join(base_dir, "111.xlsx"),
-    ]
-    excel_path = next((p for p in candidates if os.path.exists(p)), None)
+
+    excel_path = _find_excel_path()
+
     if not excel_path:
-        raise HTTPException(status_code=500, detail="ملف بيانات الحوادث غير موجود داخل المشروع.")
+
+        raise HTTPException(
+            status_code=500,
+            detail="ملف بيانات الحوادث غير موجود.",
+        )
+
     try:
+
         df = pd.read_excel(
             excel_path,
             sheet_name="Accidents",
-            usecols=lambda c: c in ("Governorate_EN", "Highway_Name", "Fatalities_Count", "Injuries_Count")
+            usecols=lambda c: c in (
+                "Governorate_EN",
+                "Highway_Name",
+                "Fatalities_Count",
+                "Injuries_Count",
+            ),
         )
+
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"تعذر قراءة بيانات الحوادث: {exc}")
-    required = ["Governorate_EN", "Highway_Name"]
-    missing = [c for c in required if c not in df.columns]
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"تعذر قراءة بيانات الحوادث: {exc}",
+        )
+
+    required = [
+        "Governorate_EN",
+        "Highway_Name",
+    ]
+
+    missing = [
+        c
+        for c in required
+        if c not in df.columns
+    ]
+
     if missing:
-        raise HTTPException(status_code=500, detail=f"أعمدة البيانات المطلوبة غير موجودة: {missing}")
-    for c in ["Governorate_EN", "Highway_Name"]:
-        df[c] = df[c].fillna("").astype(str).str.strip()
-    for c in ["Fatalities_Count", "Injuries_Count"]:
-        if c not in df.columns:
-            df[c] = 0
-        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
-    df = df[(df["Governorate_EN"] != "") & (df["Highway_Name"] != "")].copy()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"أعمدة مفقودة: {missing}",
+        )
+
+    for col in (
+        "Governorate_EN",
+        "Highway_Name",
+    ):
+
+        df[col] = (
+            df[col]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+        )
+
+    for col in (
+        "Fatalities_Count",
+        "Injuries_Count",
+    ):
+
+        if col not in df.columns:
+            df[col] = 0
+
+        df[col] = pd.to_numeric(
+            df[col],
+            errors="coerce",
+        ).fillna(0)
+
+    df = df[
+        (df["Governorate_EN"] != "")
+        & (df["Highway_Name"] != "")
+    ].copy()
+
     _JOURNEY_DF = df
+
+    print(
+        f"[OK] Journey data cached: {len(df)} rows."
+    )
+
     return df
 
 
-# نفس فكرة get_excel_data/roadwise_cache: بنملى _JOURNEY_DF وقت تشغيل
-# السيرفر نفسه بدل ما نستنى أول مستخدم يفتح /journey-options، عشان ميحصلش
-# تأخير/502 وقت أول طلب فعلي بعد أي Deploy أو Restart.
-try:
-    _load_journey_df()
-except Exception as e:
-    print(f"[WARN] تعذر تحميل بيانات الرحلات عند التشغيل: {e}")
-
-
 def _road_raw_index(rows) -> float:
-    """المؤشر الخام (raw) المشتق من نتائج الحوادث الفعلية لمجموعة صفوف
-    طريق واحد. نفس صيغة الحساب القديمة (فتلات/إصابات مرجّحة لكل حادثة) -
-    لسه مفيدة كترتيب نسبي بين الطرق، بس مش صالحة كـ0-100 مباشرة لأن
-    متوسط raw عبر كل الطرق فعليًا بيتخطى الـ100 (راجع التعليق فى
-    _load_journey_raw_stats تحت)."""
+
     accidents = len(rows)
-    fatalities = rows["Fatalities_Count"].sum()
-    injuries = rows["Injuries_Count"].sum()
-    return ((fatalities * 5.0) + injuries) / max(accidents, 1) * 10.0
+
+    fatalities = rows[
+        "Fatalities_Count"
+    ].sum()
+
+    injuries = rows[
+        "Injuries_Count"
+    ].sum()
+
+    return (
+        (
+            fatalities * 5.0
+        )
+        + injuries
+    ) / max(
+        accidents,
+        1,
+    ) * 10.0
 
 
 def _load_journey_raw_stats():
-    """يحسب حدود التطبيع (5th/95th percentile) لمؤشر raw عبر كل الطرق
-    الفعلية فى الداتا، مرة واحدة بس، ونكاشها.
 
-    ليه مش زي القديم (min(100.0, raw))؟
-    لأن متوسط raw لأي طريق عادي (مش أخطر طريق) بيتخطى الـ100 أصلاً فى
-    الداتاست ده (متوسط وفيات/حادثة ≈ 0.79 ومتوسط إصابات/حادثة ≈ 8.4 ->
-    raw ≈ 124 حتى للمتوسط العام). القص الثابت عند 100 كان بيخلي كل
-    الطرق تقريبًا تطلع risk_score = 100 و"مرتفع جدًا"، من غير أي قدرة
-    فعلية على التمييز بين طريق خطير وطريق أقل خطورة.
-
-    الحل: بنحسب raw لكل طريق حقيقى فى الداتا مرة واحدة، وبعدين بنطبّع كل
-    طريق نسبةً للـ5th/95th percentile الفعليين (مش أقل/أعلى قيمة
-    بالظبط، عشان طريق واحد شاذ إحصائيًا ميضغطش باقي المقياس). النتيجة:
-    أخطر الطرق فعليًا تاخد قريب من 100، الأقل خطورة تاخد قريب من صفر،
-    والباقي يتوزع بينهم بمنطقية.
-    """
     global _JOURNEY_RAW_STATS
+
     if _JOURNEY_RAW_STATS is not None:
         return _JOURNEY_RAW_STATS
 
     df = _load_journey_df()
+
     raws = [
         _road_raw_index(rows)
-        for _, rows in df.groupby(["Governorate_EN", "Highway_Name"], sort=False)
+        for _, rows in df.groupby(
+            [
+                "Governorate_EN",
+                "Highway_Name",
+            ],
+            sort=False,
+        )
     ]
 
     if not raws:
-        _JOURNEY_RAW_STATS = (0.0, 1.0)
+
+        _JOURNEY_RAW_STATS = (
+            0.0,
+            1.0,
+        )
+
         return _JOURNEY_RAW_STATS
 
-    series = pd.Series(raws, dtype="float64")
-    low = float(series.quantile(0.05))
-    high = float(series.quantile(0.95))
-    if high - low < 1e-9:
-        high = low + 1e-9
+    series = pd.Series(
+        raws,
+        dtype="float64",
+    )
 
-    _JOURNEY_RAW_STATS = (low, high)
+    low = float(
+        series.quantile(0.05)
+    )
+
+    high = float(
+        series.quantile(0.95)
+    )
+
+    if high <= low:
+        high = low + 1.0
+
+    _JOURNEY_RAW_STATS = (
+        low,
+        high,
+    )
+
     return _JOURNEY_RAW_STATS
 
 
-def _road_metrics(df, governorate, road_name):
-    g = str(governorate).strip()
-    r = str(road_name).strip()
-    rows = df[(df["Governorate_EN"].str.casefold() == g.casefold()) &
-              (df["Highway_Name"].str.casefold() == r.casefold())]
+def _calculate_road_metrics(
+    rows,
+    governorate,
+    road_name,
+):
+
     if rows.empty:
         return None
+
     accidents = int(len(rows))
-    fatalities = int(rows["Fatalities_Count"].sum())
-    injuries = int(rows["Injuries_Count"].sum())
+
+    fatalities = int(
+        rows["Fatalities_Count"].sum()
+    )
+
+    injuries = int(
+        rows["Injuries_Count"].sum()
+    )
 
     raw = _road_raw_index(rows)
 
-    # تطبيع نسبي (percentile-based) بدل القص الثابت القديم عند 100 -
-    # راجع _load_journey_raw_stats لشرح المشكلة والحل.
     low, high = _load_journey_raw_stats()
-    normalized = (raw - low) / (high - low) * 100.0
-    risk_score = round(max(0.0, min(100.0, normalized)), 1)
+
+    normalized = (
+        (raw - low)
+        / max(high - low, 1.0)
+        * 100.0
+    )
+
+    risk_score = round(
+        max(
+            0.0,
+            min(
+                100.0,
+                normalized,
+            ),
+        ),
+        1,
+    )
 
     if risk_score >= 75:
         level = "مرتفع جدًا"
@@ -462,9 +777,10 @@ def _road_metrics(df, governorate, road_name):
         level = "متوسط"
     else:
         level = "منخفض"
+
     return {
-        "governorate": g,
-        "road_name": r,
+        "governorate": str(governorate).strip(),
+        "road_name": str(road_name).strip(),
         "risk_score": risk_score,
         "risk_level": level,
         "accidents": accidents,
@@ -474,97 +790,300 @@ def _road_metrics(df, governorate, road_name):
     }
 
 
+def _build_journey_metrics_cache():
+
+    global _JOURNEY_METRICS_CACHE
+
+    if _JOURNEY_METRICS_CACHE is not None:
+        return _JOURNEY_METRICS_CACHE
+
+    df = _load_journey_df()
+
+    cache = {}
+
+    for (
+        governorate,
+        road_name,
+    ), rows in df.groupby(
+        [
+            "Governorate_EN",
+            "Highway_Name",
+        ],
+        sort=False,
+    ):
+
+        key = (
+            str(governorate).strip().casefold(),
+            str(road_name).strip().casefold(),
+        )
+
+        cache[key] = _calculate_road_metrics(
+            rows,
+            governorate,
+            road_name,
+        )
+
+    _JOURNEY_METRICS_CACHE = cache
+
+    print(
+        f"[OK] Road metrics cached: {len(cache)} roads."
+    )
+
+    return cache
+
+
+def _road_metrics(
+    df,
+    governorate,
+    road_name,
+):
+
+    key = (
+        str(governorate).strip().casefold(),
+        str(road_name).strip().casefold(),
+    )
+
+    cache = _build_journey_metrics_cache()
+
+    return cache.get(key)
+
+
+try:
+    _load_journey_df()
+except Exception as e:
+    print(
+        f"[WARN] Journey cache failed: {e}"
+    )
+
+
+# ============================================================
+# JOURNEY ENDPOINTS
+# ============================================================
+
 class JourneyRequest(BaseModel):
+
     governorate: str
     road_name: str
     hour_24: int
     weather: str = "Clear"
 
 
-# القيم اللي واجهة المستخدم بتبعتها (Clear/Rain/Fog/Dust) مش نفسها بالحرف
-# القيم اللي الموديل اتدرب عليها فعليًا فى عمود Weather_Condition - نفس
-# التحويل المستخدم فى data_prep.py (WEATHER_MAP) عشان نتجنب إرسال قيمة
-# مش متطابقة حرفيًا، واللي الـ OneHotEncoder هيتجاهلها بصمت (handle_
-# unknown="ignore") من غير أي تنبيه ظاهر.
-_WEATHER_TRAINED_MAP = {"Clear": "Clear", "Rain": "Light Rain", "Fog": "Fog", "Dust": "Dusty"}
+_WEATHER_TRAINED_MAP = {
+    "Clear": "Clear",
+    "Rain": "Light Rain",
+    "Fog": "Fog",
+    "Dust": "Dusty",
+}
 
 
-def _ai_predict_road_risk(road_name: str, hour_24: int, weather: str) -> Optional[Dict[str, Any]]:
-    """يبني Scenario واقعي للطريق من متوسطات/أكثر القيم شيوعًا فى حوادث
-    الطريق الفعلية (risk_model.build_average_scenario - كانت موجودة
-    ومبنية بالفعل بس مش متستخدمة فى أي مكان)، يعدّل عليه الساعة والطقس
-    اللي اختارهم المستخدم فعليًا، ثم يمرره لموديل التصنيف الحقيقي
-    (final_injury_classifier_catboost.pkl) عن طريق ai_model.predict().
+def _ai_predict_road_risk(
+    road_name: str,
+    hour_24: int,
+    weather: str,
+):
 
-    أي حقل سائق/مركبة مش متاح من بيانات الطريق نفسها (العمر، الجنس، سنوات
-    الخبرة، الدخل الشهري...إلخ) بيتسيب من غير قيمة عمدًا - ai_model._to_frame
-    بيحوّلها NaN تلقائيًا، والـ Pipeline المحفوظ فى الـ .pkl بيملأها بنفسه
-    (median للأرقام / الأكثر شيوعًا للفئوي). ده سلوك موثّق ومقصود فى
-    الموديل نفسه، مش افتراض بنضيفه إحنا."""
-    scenario = risk_model.build_average_scenario(road_name)
+    model = require_ai()
+    rm = require_risk_model()
+
+    scenario = rm.build_average_scenario(
+        road_name
+    )
+
     if not scenario:
         return None
+
     scenario["Hour_24"] = hour_24
-    scenario["Weather_Condition"] = _WEATHER_TRAINED_MAP.get(weather, weather)
-    return ai_model.predict(scenario)
+
+    scenario[
+        "Weather_Condition"
+    ] = _WEATHER_TRAINED_MAP.get(
+        weather,
+        weather,
+    )
+
+    return model.predict(
+        scenario
+    )
 
 
 class JourneyOptionsResponse(BaseModel):
+
     governorates: List[str]
-    roads_by_governorate: Dict[str, List[str]]
+
+    roads_by_governorate: Dict[
+        str,
+        List[str],
+    ]
 
 
-@app.get("/journey-options", response_model=JourneyOptionsResponse)
+@app.get(
+    "/journey-options",
+    response_model=JourneyOptionsResponse,
+)
 def journey_options():
+
     df = _load_journey_df()
+
     grouped = {}
-    for gov, g in df.groupby("Governorate_EN", sort=True):
-        roads = sorted(g["Highway_Name"].dropna().unique().tolist())
-        roads = [r for r in roads if r and r.lower() != "nan"]
+
+    for gov, g in df.groupby(
+        "Governorate_EN",
+        sort=True,
+    ):
+
+        roads = sorted(
+            g[
+                "Highway_Name"
+            ]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+
+        roads = [
+            r
+            for r in roads
+            if r
+            and str(r).lower() != "nan"
+        ]
+
         if roads:
             grouped[gov] = roads
-    return {"governorates": list(grouped.keys()), "roads_by_governorate": grouped}
+
+    return {
+        "governorates": list(
+            grouped.keys()
+        ),
+        "roads_by_governorate": grouped,
+    }
 
 
-@app.post("/analyze-road-journey")
-def analyze_road_journey(body: JourneyRequest):
+@app.post(
+    "/analyze-road-journey"
+)
+def analyze_road_journey(
+    body: JourneyRequest,
+):
+
     if not body.governorate.strip():
-        raise HTTPException(status_code=422, detail="اختاري المحافظة.")
+
+        raise HTTPException(
+            status_code=422,
+            detail="اختاري المحافظة.",
+        )
+
     if not body.road_name.strip():
-        raise HTTPException(status_code=422, detail="اختاري الطريق.")
-    if body.hour_24 < 0 or body.hour_24 > 23:
-        raise HTTPException(status_code=422, detail="الساعة يجب أن تكون بين 0 و23.")
+
+        raise HTTPException(
+            status_code=422,
+            detail="اختاري الطريق.",
+        )
+
+    if not 0 <= body.hour_24 <= 23:
+
+        raise HTTPException(
+            status_code=422,
+            detail="الساعة يجب أن تكون بين 0 و23.",
+        )
+
     df = _load_journey_df()
-    metrics = _road_metrics(df, body.governorate, body.road_name)
+
+    metrics = _road_metrics(
+        df,
+        body.governorate,
+        body.road_name,
+    )
+
     if metrics is None:
-        raise HTTPException(status_code=404, detail="الطريق المختار غير موجود داخل بيانات الحوادث لهذه المحافظة.")
 
-    # نحاول الأول نستخدم موديل التصنيف الحقيقي (final_injury_classifier_
-    # catboost.pkl) بدل الصيغة الإحصائية اليدوية القديمة - راجع
-    # _ai_predict_road_risk. لو الموديل مش جاهز أو الطريق معندوش بيانات
-    # كافية لبناء Scenario، نرجع تلقائيًا للمنطق التاريخي القديم بدل ما
-    # نكسر الـ endpoint.
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "الطريق غير موجود داخل بيانات هذه المحافظة."
+            ),
+        )
+
     ai_result = None
-    if AI_READY:
-        try:
-            ai_result = _ai_predict_road_risk(body.road_name, body.hour_24, body.weather)
-        except Exception:
-            ai_result = None
 
-    if ai_result is not None:
-        final_score = ai_result["risk_score_0_100"]
-        level = ai_result["risk_level"]
-        source = "final_injury_classifier_catboost.pkl (نموذج تعلّم آلي حقيقي)"
-        model_used = "ai_classifier"
-        injury_probability = ai_result["injury_probability"]
-    else:
-        # نفس المنطق التاريخي القديم بالظبط - fallback آمن.
+    if AI_READY:
+
         try:
-            context = risk_model.predict_trip([metrics["governorate"]], body.hour_24, body.weather)
-            context_score = float(context.get("risk_score", metrics["risk_score"]))
+
+            ai_result = _ai_predict_road_risk(
+                body.road_name,
+                body.hour_24,
+                body.weather,
+            )
+
+        except Exception as e:
+
+            print(
+                f"[WARN] Journey AI failed: {e}"
+            )
+
+    if ai_result:
+
+        final_score = float(
+            ai_result[
+                "risk_score_0_100"
+            ]
+        )
+
+        level = ai_result[
+            "risk_level"
+        ]
+
+        source = (
+            "final_injury_classifier_catboost.pkl "
+            "(نموذج تعلّم آلي)"
+        )
+
+        model_used = "ai_classifier"
+
+        injury_probability = ai_result[
+            "injury_probability"
+        ]
+
+    else:
+
+        try:
+
+            rm = require_risk_model()
+
+            context = rm.predict_trip(
+                [
+                    metrics[
+                        "governorate"
+                    ]
+                ],
+                body.hour_24,
+                body.weather,
+            )
+
+            context_score = float(
+                context.get(
+                    "risk_score",
+                    metrics["risk_score"],
+                )
+            )
+
         except Exception:
-            context_score = metrics["risk_score"]
-        final_score = round(min(100.0, max(metrics["risk_score"], context_score)), 1)
+
+            context_score = metrics[
+                "risk_score"
+            ]
+
+        final_score = round(
+            min(
+                100.0,
+                max(
+                    metrics["risk_score"],
+                    context_score,
+                ),
+            ),
+            1,
+        )
+
         if final_score >= 75:
             level = "مرتفع جدًا"
         elif final_score >= 55:
@@ -573,232 +1092,1153 @@ def analyze_road_journey(body: JourneyRequest):
             level = "متوسط"
         else:
             level = "منخفض"
-        source = "accidents_data.xlsx / Accidents (مؤشر تاريخي - نموذج التصنيف غير متاح حاليًا)"
+
+        source = (
+            "accidents_data.xlsx / Accidents "
+            "(مؤشر تاريخي)"
+        )
+
         model_used = "historical_index"
+
         injury_probability = None
 
     result = {
         **metrics,
+
         "risk_score": final_score,
+
         "risk_level": level,
+
         "hour_24": body.hour_24,
+
         "weather": body.weather,
+
         "source": source,
+
         "model_used": model_used,
+
         "recommendation": (
-            "الطريق مرتفع الخطورة وفق نتائج الحوادث المسجلة؛ يفضّل خفض السرعة وتجنب الظروف الجوية السيئة."
+            "الطريق مرتفع الخطورة؛ "
+            "يفضل خفض السرعة وتجنب الظروف الجوية السيئة."
             if final_score >= 55
-            else "مستوى الخطورة أقل وفق بيانات الحوادث المسجلة، مع الالتزام بالسرعة الآمنة وتعليمات المرور."
+            else
+            "مستوى الخطورة أقل، مع الالتزام بالسرعة الآمنة وتعليمات المرور."
         ),
     }
+
     if injury_probability is not None:
-        result["injury_probability"] = injury_probability
+        result[
+            "injury_probability"
+        ] = injury_probability
+
     return result
 
 
 @app.post("/best-route")
-def best_route(body: JourneyRequest):
-    # اختيار أقل Risk Score من الطرق الفعلية داخل المحافظة المختارة.
+def best_route(
+    body: JourneyRequest,
+):
+
     df = _load_journey_df()
-    gov = body.governorate.strip().casefold()
-    subset = df[df["Governorate_EN"].str.casefold() == gov]
+
+    gov = (
+        body.governorate
+        .strip()
+        .casefold()
+    )
+
+    subset = df[
+        df[
+            "Governorate_EN"
+        ].str.casefold()
+        == gov
+    ]
+
     if subset.empty:
-        raise HTTPException(status_code=404, detail="لا توجد محافظة بهذا الاسم في البيانات.")
+
+        raise HTTPException(
+            status_code=404,
+            detail="لا توجد محافظة بهذا الاسم.",
+        )
+
     options = []
-    for road in sorted(subset["Highway_Name"].unique()):
-        m = _road_metrics(df, body.governorate, road)
+
+    for road in sorted(
+        subset[
+            "Highway_Name"
+        ].dropna().unique()
+    ):
+
+        m = _road_metrics(
+            df,
+            body.governorate,
+            road,
+        )
+
         if m:
             options.append(m)
-    options.sort(key=lambda x: x["risk_score"])
+
+    options.sort(
+        key=lambda x: x["risk_score"]
+    )
+
     if not options:
-        raise HTTPException(status_code=404, detail="لا توجد طرق مدعومة في بيانات الحوادث لهذه المحافظة.")
-    best = options[0]
+
+        raise HTTPException(
+            status_code=404,
+            detail="لا توجد طرق مدعومة.",
+        )
+
     return {
         "governorate": body.governorate,
-        "best_available_option": best,
+
+        "best_available_option": options[0],
+
         "alternatives": options[:5],
-        "source": "accidents_data.xlsx / Accidents",
-        "note": "الاختيار مبني على أقل Risk Score من الطرق الفعلية المسجلة داخل المحافظة.",
+
+        "source": (
+            "accidents_data.xlsx / Accidents"
+        ),
+
+        "note": (
+            "الاختيار مبني على أقل Risk Score "
+            "من الطرق الفعلية المسجلة."
+        ),
     }
 
 
-def _road_list_for_governorate(governorate):
-    """يبني قائمة بكل الطرق الفعلية المسجلة داخل محافظة معيّنة مع
-    risk_score محسوب لكل واحد منها.
+def _road_list_for_governorate(
+    governorate
+):
 
-    ملحوظة: الدالة دي كانت متسخدمة فى /governorate-roads تحت من غير ما
-    تكون معرّفة فى أي مكان فى الملف - أي نداء على الـendpoint ده كان
-    هيطلع NameError دايمًا. تم تعريفها هنا بنفس منطق best_route."""
     df = _load_journey_df()
-    gov = str(governorate).strip().casefold()
-    subset = df[df["Governorate_EN"].str.casefold() == gov]
+
+    gov = (
+        str(governorate)
+        .strip()
+        .casefold()
+    )
+
+    subset = df[
+        df[
+            "Governorate_EN"
+        ].str.casefold()
+        == gov
+    ]
+
     roads = []
-    for road in sorted(subset["Highway_Name"].unique()):
-        m = _road_metrics(df, governorate, road)
+
+    for road in sorted(
+        subset[
+            "Highway_Name"
+        ].dropna().unique()
+    ):
+
+        m = _road_metrics(
+            df,
+            governorate,
+            road,
+        )
+
         if m:
             roads.append(m)
+
     return roads
 
 
 @app.get("/governorate-roads")
-def governorate_roads(governorate: str):
-    roads = _road_list_for_governorate(governorate)
-    roads = sorted(roads, key=lambda x: float(x.get("risk_score", 999)))
-    return {"governorate": governorate, "count": len(roads), "roads": roads}
+def governorate_roads(
+    governorate: str,
+):
 
+    roads = _road_list_for_governorate(
+        governorate
+    )
+
+    roads.sort(
+        key=lambda x: float(
+            x.get(
+                "risk_score",
+                999,
+            )
+        )
+    )
+
+    return {
+        "governorate": governorate,
+        "count": len(roads),
+        "roads": roads,
+    }
+
+
+# ============================================================
+# WHAT-IF HELPERS
+# ============================================================
+
+_FACTOR_ALIASES = {
+    "speed reduction": "Speed Reduction",
+    "خفض السرعة": "Speed Reduction",
+    "speed": "Speed Reduction",
+    "السرعة": "Speed Reduction",
+}
+
+
+def _normalize_factor(factor: str):
+
+    raw = str(factor).strip()
+
+    alias = _FACTOR_ALIASES.get(
+        raw.casefold()
+    )
+
+    if alias:
+        return alias
+
+    for key in CONTROLLABLE_FACTORS:
+
+        if key.casefold() == raw.casefold():
+            return key
+
+    return raw
+
+
+# ============================================================
+# WHAT-IF
+# ============================================================
 
 @app.post("/what-if")
 def what_if(
     body: WhatIfBody,
-    user=Depends(get_current_user)
+    user=Depends(get_current_user),
 ):
-    """محاكاة سيناريو تحسين حقيقية: بتبني متوسط سيناريو الطريق (زي Model 1
-    بالظبط - risk_model.build_average_scenario)، وتحسب احتمالية الإصابة
-    قبل/بعد تغيير عامل واحد قابل للتحكم (زي الإضاءة أو حالة الرصف) لقيمته
-    الآمنة، باستخدام موديل التصنيف الحقيقي عن طريق ai_model.what_if()
-    (كانت موجودة ومبنية بالفعل، بس مربوطة بس بـ /ai/what-if اللي الواجهة
-    ماكانتش بتستخدمه). لاحظي إن مفيش "نسبة تحسين %" هنا زي القديم - العامل
-    فئوي (زي حالة الرصف) مش نسبة مئوية، فمفيش معنى حقيقي لسحّاب %.
-    """
-    if user["role"] not in ("decision", "admin"):
-        raise HTTPException(
-            status_code=403,
-            detail="مسموح فقط لحسابات متخذي القرار"
-        )
+
+    _require_decision_user(user)
 
     model = require_ai()
+    rm = require_risk_model()
 
-    if body.factor not in CONTROLLABLE_FACTORS:
+    factor = _normalize_factor(
+        body.factor
+    )
+
+    # ========================================================
+    # SPEED REDUCTION — MODEL 2
+    # ========================================================
+
+    if factor == "Speed Reduction":
+
+        if body.improvement_pct is None:
+
+            raise HTTPException(
+                status_code=422,
+                detail="لازم تحددي نسبة خفض السرعة.",
+            )
+
+        try:
+
+            pct = float(
+                body.improvement_pct
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            raise HTTPException(
+                status_code=422,
+                detail="نسبة خفض السرعة يجب أن تكون رقمًا.",
+            )
+
+        if not 0 <= pct <= 100:
+
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "نسبة خفض السرعة يجب أن تكون بين 0 و100."
+                ),
+            )
+
+        try:
+
+            scenario = rm.build_average_scenario(
+                body.road_name
+            )
+
+        except Exception as e:
+
+            print(
+                f"[ERROR] Scenario failed: {e}"
+            )
+
+            raise HTTPException(
+                status_code=500,
+                detail="تعذر بناء سيناريو الطريق.",
+            )
+
+        if not scenario:
+
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "لا توجد بيانات كافية عن هذا الطريق."
+                ),
+            )
+
+        current_speed = scenario.get(
+            "Impact_Speed_KMH"
+        )
+
+        speed_limit = scenario.get(
+            "Posted_Speed_Limit_KMH"
+        )
+
+        try:
+
+            current_speed = float(
+                current_speed
+            )
+
+            speed_limit = float(
+                speed_limit
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "بيانات السرعة أو الحد الأقصى غير صالحة."
+                ),
+            )
+
+        if current_speed < 0:
+            current_speed = 0.0
+
+        if speed_limit <= 0:
+
+            raise HTTPException(
+                status_code=422,
+                detail="الحد الأقصى للسرعة غير صالح.",
+            )
+
+        new_speed = max(
+            0.0,
+            current_speed
+            * (
+                1.0
+                - pct / 100.0
+            ),
+        )
+
+        before_scenario = dict(
+            scenario
+        )
+
+        after_scenario = dict(
+            scenario
+        )
+
+        before_scenario[
+            "Impact_Speed_KMH"
+        ] = current_speed
+
+        after_scenario[
+            "Impact_Speed_KMH"
+        ] = new_speed
+
+        before_scenario[
+            "Posted_Speed_Limit_KMH"
+        ] = speed_limit
+
+        after_scenario[
+            "Posted_Speed_Limit_KMH"
+        ] = speed_limit
+
+        try:
+
+            before = model.predict_impact(
+                before_scenario
+            )
+
+            after = model.predict_impact(
+                after_scenario
+            )
+
+        except Exception as e:
+
+            print(
+                f"[ERROR] Speed What-If failed: {e}"
+            )
+
+            raise HTTPException(
+                status_code=500,
+                detail="تعذر تشغيل Model 2.",
+            )
+
+        original_score = float(
+            before.get(
+                "impact_score",
+                0.0,
+            )
+        )
+
+        new_score = float(
+            after.get(
+                "impact_score",
+                0.0,
+            )
+        )
+
+        improvement_points = round(
+            original_score
+            - new_score,
+            2,
+        )
+
+        if original_score > 0:
+
+            improvement_percent = round(
+                (
+                    improvement_points
+                    / original_score
+                )
+                * 100.0,
+                2,
+            )
+
+        else:
+
+            improvement_percent = 0.0
+
+        # ----------------------------------------------------
+        # IMPORTANT:
+        # We do not overwrite ML output.
+        # If individual outcome moves unexpectedly while
+        # total impact score improves, expose a warning.
+        # ----------------------------------------------------
+
+        behavior_note = None
+
+        if (
+            after.get(
+                "expected_fatalities"
+            ) is not None
+            and before.get(
+                "expected_fatalities"
+            ) is not None
+            and float(
+                after.get(
+                    "expected_fatalities",
+                    0,
+                )
+            )
+            >
+            float(
+                before.get(
+                    "expected_fatalities",
+                    0,
+                )
+            )
+            and new_score < original_score
+        ):
+
+            behavior_note = (
+                "النموذج يتوقع انخفاض التأثير الكلي، "
+                "مع اختلاف اتجاه تقدير الوفيات بشكل منفصل؛ "
+                "لذلك تم الإبقاء على مخرجات Model 2 كما هي "
+                "دون تعديل يدوي."
+            )
+
+        return {
+
+            "road_name":
+                body.road_name,
+
+            "factor":
+                "Speed Reduction",
+
+            "factor_label":
+                "خفض السرعة",
+
+            "action":
+                f"خفض السرعة بنسبة {pct:.1f}%",
+
+            "improvement_pct":
+                pct,
+
+            "original_speed":
+                round(
+                    current_speed,
+                    1,
+                ),
+
+            "new_speed":
+                round(
+                    new_speed,
+                    1,
+                ),
+
+            "speed_limit":
+                round(
+                    speed_limit,
+                    1,
+                ),
+
+            "original_risk_score":
+                round(
+                    original_score,
+                    2,
+                ),
+
+            "estimated_new_risk_score":
+                round(
+                    new_score,
+                    2,
+                ),
+
+            "improvement_points":
+                improvement_points,
+
+            "improvement_percent":
+                improvement_percent,
+
+            "original_risk_level":
+                before.get(
+                    "impact_level"
+                ),
+
+            "new_risk_level":
+                after.get(
+                    "impact_level"
+                ),
+
+            "original_expected_injuries":
+                before.get(
+                    "expected_injuries"
+                ),
+
+            "new_expected_injuries":
+                after.get(
+                    "expected_injuries"
+                ),
+
+            "original_expected_fatalities":
+                before.get(
+                    "expected_fatalities"
+                ),
+
+            "new_expected_fatalities":
+                after.get(
+                    "expected_fatalities"
+                ),
+
+            "before":
+                before,
+
+            "after":
+                after,
+
+            "behavior_note":
+                behavior_note,
+
+            "debug":
+                {
+                    "model":
+                        "Model 2",
+
+                    "speed_feature":
+                        "Impact_Speed_KMH",
+
+                    "original_speed":
+                        current_speed,
+
+                    "new_speed":
+                        new_speed,
+
+                    "speed_limit":
+                        speed_limit,
+
+                    "original_speed_over_limit":
+                        max(
+                            0.0,
+                            current_speed
+                            - speed_limit,
+                        ),
+
+                    "new_speed_over_limit":
+                        max(
+                            0.0,
+                            new_speed
+                            - speed_limit,
+                        ),
+
+                    "original_speed_ratio":
+                        current_speed
+                        / speed_limit,
+
+                    "new_speed_ratio":
+                        new_speed
+                        / speed_limit,
+
+                    "speed_reduction_pct":
+                        pct,
+
+                    "features_used_before":
+                        before.get(
+                            "features_used"
+                        ),
+
+                    "features_used_after":
+                        after.get(
+                            "features_used"
+                        ),
+
+                    "features_expected":
+                        before.get(
+                            "features_expected"
+                        ),
+
+                    "missing_features":
+                        before.get(
+                            "missing_features"
+                        ),
+                },
+
+            "source":
+                (
+                    "final_injuries_xgboost.pkl + "
+                    "final_fatalities_catboost.pkl "
+                    "(Model 2)"
+                ),
+        }
+
+    # ========================================================
+    # CATEGORICAL FACTORS — MODEL 1
+    # ========================================================
+
+    if factor not in CONTROLLABLE_FACTORS:
+
         raise HTTPException(
             status_code=422,
-            detail=f"عامل غير معروف: {body.factor}"
+            detail=f"عامل غير معروف: {body.factor}",
         )
 
-    scenario = risk_model.build_average_scenario(body.road_name)
+    try:
+
+        scenario = rm.build_average_scenario(
+            body.road_name
+        )
+
+    except Exception as e:
+
+        print(
+            f"[ERROR] Scenario failed: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="تعذر بناء السيناريو.",
+        )
+
     if not scenario:
+
         raise HTTPException(
             status_code=404,
-            detail="لا توجد بيانات كافية عن هذا الطريق لبناء سيناريو."
+            detail=(
+                "لا توجد بيانات كافية عن هذا الطريق."
+            ),
         )
 
-    meta = CONTROLLABLE_FACTORS[body.factor]
-    result = model.what_if(scenario, {body.factor: meta["safe_value"]})
+    meta = CONTROLLABLE_FACTORS[
+        factor
+    ]
+
+    try:
+
+        result = model.what_if(
+            scenario,
+            {
+                factor:
+                    meta["safe_value"]
+            },
+        )
+
+    except Exception as e:
+
+        print(
+            f"[ERROR] Categorical What-If failed: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="تعذر تشغيل What-If.",
+        )
+
+    original_probability = float(
+        result[
+            "original"
+        ][
+            "injury_probability"
+        ]
+    )
+
+    new_probability = float(
+        result[
+            "after_changes"
+        ][
+            "injury_probability"
+        ]
+    )
 
     return {
-        "road_name": body.road_name,
-        "factor": body.factor,
-        "factor_label": meta["label"],
-        "action": meta["action"],
-        "original_risk_score": round(result["original"]["injury_probability"] * 100, 1),
-        "estimated_new_risk_score": round(result["after_changes"]["injury_probability"] * 100, 1),
-        "original_risk_level": result["original"]["risk_level"],
-        "new_risk_level": result["after_changes"]["risk_level"],
-        "improvement_points": result["improvement_points"],
-        "source": "final_injury_classifier_catboost.pkl (نموذج تعلّم آلي حقيقي)",
+
+        "road_name":
+            body.road_name,
+
+        "factor":
+            factor,
+
+        "factor_label":
+            meta["label"],
+
+        "action":
+            meta["action"],
+
+        "original_risk_score":
+            round(
+                original_probability * 100,
+                1,
+            ),
+
+        "estimated_new_risk_score":
+            round(
+                new_probability * 100,
+                1,
+            ),
+
+        "original_risk_level":
+            result[
+                "original"
+            ][
+                "risk_level"
+            ],
+
+        "new_risk_level":
+            result[
+                "after_changes"
+            ][
+                "risk_level"
+            ],
+
+        "improvement_points":
+            result[
+                "improvement_points"
+            ],
+
+        "debug":
+            result.get(
+                "debug"
+            ),
+
+        "source":
+            (
+                "final_injury_classifier_catboost.pkl "
+                "(Model 1)"
+            ),
     }
 
 
-@app.get("/dashboard-stats")
-def dashboard_stats(user=Depends(get_current_user)):
-    if user["role"] not in ("decision", "admin"):
-        raise HTTPException(
-            status_code=403,
-            detail="مسموح فقط لحسابات متخذي القرار"
-        )
+# ============================================================
+# DASHBOARD
+# ============================================================
 
-    return risk_model.get_dashboard_stats()
+@app.get("/dashboard-stats")
+def dashboard_stats(
+    user=Depends(get_current_user),
+):
+
+    _require_decision_user(user)
+
+    return require_risk_model().get_dashboard_stats()
 
 
 @app.get("/roads")
 def roads(
     governorate: Optional[str] = None,
-    user=Depends(get_current_user)
+    user=Depends(get_current_user),
 ):
-    if user["role"] not in ("decision", "admin"):
-        raise HTTPException(
-            status_code=403,
-            detail="مسموح فقط لحسابات متخذي القرار"
-        )
 
-    return risk_model.get_roads(governorate)
+    _require_decision_user(user)
 
-
-_CLS_RANK = {"likely_false": 0, "needs_review": 1, "likely_valid": 2}
+    return require_risk_model().get_roads(
+        governorate
+    )
 
 
-def _combine_verification(text_result: Dict[str, Any], image_flag: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """يدمج تصنيف النص مع فحص الصورة في تصنيف نهائي واحد للبلاغ (Report
-    Verification)، بحرص شديد إن صورة "irrelevant" لوحدها ميقدرش يطلع منها
-    حكم "likely_false" - أقصى حاجة يعملها إنه يخفض الثقة لـ needs_review،
-    زي ما هو موضّح في image_verification.py. الصورة اللي بتثبت الحادث/الخطر
-    ("evidence_detected"/"hazard_detected") ممكن ترفع مستوى الثقة بحد أقصى
-    درجة واحدة فقط.
-    """
-    overall = text_result["classification"]
+# ============================================================
+# REPORT VERIFICATION
+# ============================================================
+
+_CLS_RANK = {
+    "likely_false": 0,
+    "needs_review": 1,
+    "likely_valid": 2,
+}
+
+
+_LABELS_AR = {
+    "likely_valid":
+        "يبدو صحيحًا",
+
+    "needs_review":
+        "يحتاج مراجعة بشرية",
+
+    "likely_false":
+        "يبدو غير صحيح / مشبوه",
+}
+
+
+def _combine_verification(
+    text_result: Dict[str, Any],
+    image_flag: Optional[
+        Dict[str, Any]
+    ],
+):
+
+    overall = text_result.get(
+        "classification",
+        "needs_review",
+    )
+
+    if overall not in _CLS_RANK:
+        overall = "needs_review"
 
     if image_flag:
-        img_status = image_flag.get("image_status")
-        if img_status in ("evidence_detected", "hazard_detected"):
-            # دعم إيجابي من الصورة -> نرفع درجة واحدة بحد أقصى
-            rank = min(_CLS_RANK[overall] + 1, 2)
-            overall = [k for k, v in _CLS_RANK.items() if v == rank][0]
+
+        img_status = image_flag.get(
+            "image_status"
+        )
+
+        if img_status in (
+            "evidence_detected",
+            "hazard_detected",
+        ):
+
+            rank = min(
+                _CLS_RANK[overall] + 1,
+                2,
+            )
+
+            overall = next(
+                (
+                    k
+                    for k, v
+                    in _CLS_RANK.items()
+                    if v == rank
+                ),
+                "needs_review",
+            )
+
         elif img_status == "irrelevant":
-            # الصورة وحدها ميقدرش يطلع منها "likely_false" - أقصى تأثير
-            # سلبي إنه يوقف overall عند "needs_review" لو كان "likely_valid"
+
             if overall == "likely_valid":
                 overall = "needs_review"
 
     return {
-        "overall_classification": overall,
-        "overall_label_ar": _LABELS_AR[overall],
-        "text_verification": text_result,
-        "image_verification": image_flag,
+
+        "overall_classification":
+            overall,
+
+        "overall_label_ar":
+            _LABELS_AR.get(
+                overall,
+                _LABELS_AR[
+                    "needs_review"
+                ],
+            ),
+
+        "text_verification":
+            text_result,
+
+        "image_verification":
+            image_flag,
     }
 
+
+def _classify_report_text(
+    description: str,
+    governorate: str = "",
+    road_name: str = "",
+) -> Dict[str, Any]:
+
+    try:
+
+        result = classify_complaint(
+            description,
+            governorate,
+            road_name,
+        )
+
+    except Exception as e:
+
+        print(
+            f"[ERROR] Complaint classification failed: {e}"
+        )
+
+        result = {
+            "classification":
+                "needs_review",
+
+            "confidence":
+                0,
+
+            "reason":
+                "تعذر تحليل البلاغ آليًا.",
+        }
+
+    classification = result.get(
+        "classification",
+        "needs_review",
+    )
+
+    if classification not in _LABELS_AR:
+        classification = "needs_review"
+
+    return {
+
+        "classification":
+            classification,
+
+        "classification_label_ar":
+            _LABELS_AR[
+                classification
+            ],
+
+        "confidence":
+            result.get(
+                "confidence",
+                0,
+            ),
+
+        "reason":
+            result.get(
+                "reason",
+                "",
+            ),
+    }
+
+
+# ============================================================
+# REPORT INCIDENT
+# ============================================================
 
 @app.post("/report-incident")
 async def report_incident(
     governorate: str = Form(...),
     road_name: str = Form(...),
     description: str = Form(...),
-    image: Optional[UploadFile] = File(None),
+    image: Optional[
+        UploadFile
+    ] = File(None),
     user=Depends(get_current_user),
 ):
-    image_path = None
-    image_flag: Optional[Dict[str, Any]] = None
 
-    if image is not None and image.filename:
-        ext = os.path.splitext(image.filename)[1] or ".jpg"
+    if not governorate.strip():
 
-        image_path = os.path.join(
-            UPLOADS_DIR,
-            f"{uuid.uuid4().hex}{ext}"
+        raise HTTPException(
+            status_code=422,
+            detail="المحافظة مطلوبة.",
         )
+
+    if not road_name.strip():
+
+        raise HTTPException(
+            status_code=422,
+            detail="اسم الطريق مطلوب.",
+        )
+
+    if not description.strip():
+
+        raise HTTPException(
+            status_code=422,
+            detail="وصف البلاغ مطلوب.",
+        )
+
+    image_path = None
+    image_flag = None
+    raw_bytes = None
+    mime_type = "image/jpeg"
+
+    # --------------------------------------------------------
+    # IMAGE
+    # --------------------------------------------------------
+
+    if (
+        image is not None
+        and image.filename
+    ):
+
+        mime_type = (
+            image.content_type
+            or "image/jpeg"
+        )
+
+        if mime_type not in ALLOWED_IMAGE_TYPES:
+
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "نوع الصورة غير مدعوم. "
+                    "استخدمي JPG أو PNG أو WEBP."
+                ),
+            )
 
         raw_bytes = await image.read()
 
-        with open(image_path, "wb") as f:
+        if not raw_bytes:
+
+            raise HTTPException(
+                status_code=422,
+                detail="الصورة فارغة.",
+            )
+
+        if len(raw_bytes) > MAX_IMAGE_SIZE:
+
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    "حجم الصورة كبير جدًا. "
+                    "الحد الأقصى 10 MB."
+                ),
+            )
+
+        ext = (
+            os.path.splitext(
+                image.filename
+            )[1]
+            or ".jpg"
+        )
+
+        image_path = os.path.join(
+            UPLOADS_DIR,
+            f"{uuid.uuid4().hex}{ext}",
+        )
+
+        with open(
+            image_path,
+            "wb",
+        ) as f:
+
             f.write(raw_bytes)
 
-        # فحص فعلي للصورة عن طريق Gemini Vision - بدون أي بيانات وهمية.
-        # لو الفحص فشل أو لم يوجد مفتاح API، النتيجة هتكون "needs_review"
-        # بشكل صريح (راجع image_verification.py).
-        verification = verify_incident_image(
-            raw_bytes,
-            mime_type=image.content_type or "image/jpeg",
+    # --------------------------------------------------------
+    # PARALLEL AI
+    # --------------------------------------------------------
+
+    tasks = [
+        asyncio.to_thread(
+            _classify_report_text,
+            description,
+            governorate,
+            road_name,
         )
-        image_flag = image_report_flag(verification)
+    ]
 
-    # تصنيف نص البلاغ بالتصنيف الثلاثي (likely_valid / needs_review /
-    # likely_false)، ثم دمجه مع فحص الصورة في حكم واحد نهائي متحفّظ.
-    text_result = _classify_report_text(description, governorate, road_name)
-    report_verification = _combine_verification(text_result, image_flag)
+    if raw_bytes is not None:
 
-    # ملاحظة: incidents.create لازم تدعم استقبال report_verification كـ
-    # حقل إضافي في السجل (زيادة عن image_verification اللي كانت موجودة).
-    # لو ظهر خطأ هنا، معناه IncidentStore في storage.py عندك محتاج تعديل
-    # بسيط ليقبل **extra fields - ابعتيلي storage.py عشان أظبطه بالظبط
-    # بدل ما أخمّن شكله.
+        tasks.append(
+            asyncio.to_thread(
+                verify_incident_image,
+                raw_bytes,
+                mime_type,
+            )
+        )
+
+    results = await asyncio.gather(
+        *tasks,
+        return_exceptions=True,
+    )
+
+    # --------------------------------------------------------
+    # TEXT
+    # --------------------------------------------------------
+
+    text_result = results[0]
+
+    if isinstance(
+        text_result,
+        Exception,
+    ):
+
+        text_result = {
+            "classification":
+                "needs_review",
+
+            "classification_label_ar":
+                _LABELS_AR[
+                    "needs_review"
+                ],
+
+            "confidence":
+                0,
+
+            "reason":
+                "تعذر تحليل البلاغ.",
+        }
+
+    # --------------------------------------------------------
+    # IMAGE
+    # --------------------------------------------------------
+
+    if raw_bytes is not None:
+
+        verification = results[1]
+
+        if isinstance(
+            verification,
+            Exception,
+        ):
+
+            print(
+                f"[ERROR] Image verification failed: {verification}"
+            )
+
+            image_flag = {
+                "image_status":
+                    "needs_review",
+
+                "confidence":
+                    0,
+
+                "reason":
+                    "تعذر فحص الصورة آليًا.",
+            }
+
+        else:
+
+            image_flag = image_report_flag(
+                verification
+            )
+
+    # --------------------------------------------------------
+    # COMBINE
+    # --------------------------------------------------------
+
+    report_verification = (
+        _combine_verification(
+            text_result,
+            image_flag,
+        )
+    )
+
+    # --------------------------------------------------------
+    # SAVE
+    # --------------------------------------------------------
+
     record = incidents.create(
         governorate=governorate,
         road_name=road_name,
@@ -810,67 +2250,205 @@ async def report_incident(
     )
 
     return {
-        "incident_id": record["id"],
-        "report_status": record["status"],
-        "image_verification": image_flag,
-        "report_verification": report_verification,
+
+        "incident_id":
+            record["id"],
+
+        "report_status":
+            record["status"],
+
+        "image_verification":
+            image_flag,
+
+        "report_verification":
+            report_verification,
     }
 
 
+# ============================================================
+# COMPLAINTS
+# ============================================================
+
 @app.get("/admin/complaints")
-def admin_complaints(user=Depends(get_current_user)):
-    """قائمة كل البلاغات - للوحة متخذ القرار فقط. الواجهة (EgyRoad_IQ.html)
-    بتنادي على الـendpoint ده بالاسم ده بالظبط."""
-    if user["role"] not in ("decision", "admin"):
-        raise HTTPException(status_code=403, detail="مسموح فقط لحسابات متخذي القرار")
+def admin_complaints(
+    user=Depends(get_current_user),
+):
+
+    _require_decision_user(user)
+
+    return incidents.list_all()
+
+
+@app.get("/complaints")
+def complaints_alias(
+    user=Depends(get_current_user),
+):
+
+    _require_decision_user(user)
+
     return incidents.list_all()
 
 
 @app.get("/my-complaints")
-def my_complaints(user=Depends(get_current_user)):
-    """بلاغات المواطن نفسه فقط - بديل حقيقي لـlocalStorage، بيشتغل حتى لو
-    المواطن غيّر متصفح أو جهاز."""
-    return incidents.list_by_user(user["sub"])
+def my_complaints(
+    user=Depends(get_current_user),
+):
+
+    return incidents.list_by_user(
+        user["sub"]
+    )
 
 
 class ClassifyIncidentBody(BaseModel):
+
     incident_id: str
 
 
 @app.post("/classify-incident")
-def classify_incident(body: ClassifyIncidentBody, user=Depends(get_current_user)):
-    """إعادة تشغيل Report Verification AI على بلاغ محفوظ فعليًا (بدل ما
-    ناخد نص خام زي /classify-complaint)، وتحديث السجل بأحدث تصنيف."""
-    if user["role"] not in ("decision", "admin"):
-        raise HTTPException(status_code=403, detail="مسموح فقط لحسابات متخذي القرار")
+async def classify_incident(
+    body: ClassifyIncidentBody,
+    user=Depends(get_current_user),
+):
 
-    record = incidents.get(body.incident_id)
-    if record is None:
-        raise HTTPException(status_code=404, detail="البلاغ غير موجود")
+    _require_decision_user(user)
 
-    text_result = _classify_report_text(
-        record.get("description", ""),
-        record.get("governorate", ""),
-        record.get("road_name", ""),
+    record = incidents.get(
+        body.incident_id
     )
-    report_verification = _combine_verification(text_result, record.get("image_verification"))
+
+    if record is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="البلاغ غير موجود.",
+        )
+
+    # --------------------------------------------------------
+    # Reuse previous classification.
+    # This avoids calling Gemini again unnecessarily.
+    # --------------------------------------------------------
+
+    existing = record.get(
+        "report_verification"
+    )
+
+    if existing:
+
+        classification = existing.get(
+            "overall_classification"
+        )
+
+        if classification in _LABELS_AR:
+
+            text_result = (
+                existing.get(
+                    "text_verification"
+                )
+                or {
+                    "classification":
+                        classification,
+                    "confidence":
+                        0,
+                    "reason":
+                        "نتيجة محفوظة سابقًا.",
+                }
+            )
+
+            return {
+
+                "classification":
+                    classification,
+
+                "label":
+                    existing.get(
+                        "overall_label_ar",
+                        _LABELS_AR[
+                            classification
+                        ],
+                    ),
+
+                "reason":
+                    text_result.get(
+                        "reason",
+                        "",
+                    ),
+
+                "confidence":
+                    text_result.get(
+                        "confidence",
+                        0,
+                    ),
+
+                "report_verification":
+                    existing,
+            }
+
+    text_result = await asyncio.to_thread(
+        _classify_report_text,
+        record.get(
+            "description",
+            "",
+        ),
+        record.get(
+            "governorate",
+            "",
+        ),
+        record.get(
+            "road_name",
+            "",
+        ),
+    )
+
+    report_verification = (
+        _combine_verification(
+            text_result,
+            record.get(
+                "image_verification"
+            ),
+        )
+    )
 
     incidents.update(
         body.incident_id,
-        report_verification=report_verification,
-        classification=report_verification["overall_classification"],
+        report_verification=(
+            report_verification
+        ),
+        classification=(
+            report_verification[
+                "overall_classification"
+            ]
+        ),
     )
 
     return {
-        "classification": report_verification["overall_classification"],
-        "label": report_verification["overall_label_ar"],
-        "reason": text_result["reason"],
-        "confidence": text_result["confidence"],
-        "report_verification": report_verification,
+
+        "classification":
+            report_verification[
+                "overall_classification"
+            ],
+
+        "label":
+            report_verification[
+                "overall_label_ar"
+            ],
+
+        "reason":
+            text_result[
+                "reason"
+            ],
+
+        "confidence":
+            text_result[
+                "confidence"
+            ],
+
+        "report_verification":
+            report_verification,
     }
 
 
 class ReviewIncidentBody(BaseModel):
+
     incident_id: str
     status: str
     classification: Optional[str] = None
@@ -878,25 +2456,63 @@ class ReviewIncidentBody(BaseModel):
 
 
 @app.post("/review-incident")
-def review_incident(body: ReviewIncidentBody, user=Depends(get_current_user)):
-    """قرار المراجعة البشري النهائي (متخذ القرار) - ده اللي بيغيّر status
-    فعليًا، مش تصنيف الـAI لوحده."""
-    if user["role"] not in ("decision", "admin"):
-        raise HTTPException(status_code=403, detail="مسموح فقط لحسابات متخذي القرار")
+def review_incident(
+    body: ReviewIncidentBody,
+    user=Depends(get_current_user),
+):
 
-    record = incidents.get(body.incident_id)
+    _require_decision_user(user)
+
+    record = incidents.get(
+        body.incident_id
+    )
+
     if record is None:
-        raise HTTPException(status_code=404, detail="البلاغ غير موجود")
 
-    fields: Dict[str, Any] = {"status": body.status, "reviewed_by": user["sub"]}
+        raise HTTPException(
+            status_code=404,
+            detail="البلاغ غير موجود.",
+        )
+
+    fields: Dict[str, Any] = {
+        "status":
+            body.status,
+
+        "reviewed_by":
+            user["sub"],
+    }
+
     if body.classification:
-        fields["classification"] = body.classification
+
+        if body.classification not in _LABELS_AR:
+
+            raise HTTPException(
+                status_code=422,
+                detail="تصنيف البلاغ غير صالح.",
+            )
+
+        fields[
+            "classification"
+        ] = body.classification
+
     if body.comment is not None:
-        fields["decision_comment"] = body.comment
 
-    updated = incidents.update(body.incident_id, **fields)
+        fields[
+            "decision_comment"
+        ] = body.comment
 
-    return {"message": "تم حفظ قرار المراجعة", "incident": updated}
+    updated = incidents.update(
+        body.incident_id,
+        **fields,
+    )
+
+    return {
+        "message":
+            "تم حفظ قرار المراجعة",
+
+        "incident":
+            updated,
+    }
 
 
 @app.post("/verify-image")
@@ -904,277 +2520,685 @@ async def verify_report_image(
     image: UploadFile = File(...),
     user=Depends(get_current_user),
 ):
-    """
-    فحص أوّلي لصورة البلاغ قبل الإرسال (زر 'فحص البلاغ بالذكاء الاصطناعي').
-    لا يتم حفظ أي بيانات هنا - فقط رأي الموديل في الصورة، عشان المواطن
-    يقدر يشوف النتيجة قبل ما يقرر يبعت البلاغ أو لأ.
-    """
+
+    mime_type = (
+        image.content_type
+        or "image/jpeg"
+    )
+
+    if mime_type not in ALLOWED_IMAGE_TYPES:
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "نوع الصورة غير مدعوم. "
+                "استخدمي JPG أو PNG أو WEBP."
+            ),
+        )
 
     raw_bytes = await image.read()
 
-    verification = verify_incident_image(
-        raw_bytes,
-        mime_type=image.content_type or "image/jpeg",
+    if not raw_bytes:
+
+        raise HTTPException(
+            status_code=422,
+            detail="الصورة فارغة.",
+        )
+
+    if len(raw_bytes) > MAX_IMAGE_SIZE:
+
+        raise HTTPException(
+            status_code=413,
+            detail="حجم الصورة يتجاوز 10 MB.",
+        )
+
+    try:
+
+        verification = await asyncio.to_thread(
+            verify_incident_image,
+            raw_bytes,
+            mime_type,
+        )
+
+    except Exception as e:
+
+        print(
+            f"[ERROR] verify-image failed: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="تعذر فحص الصورة.",
+        )
+
+    return image_report_flag(
+        verification
     )
 
-    return image_report_flag(verification)
 
+# ============================================================
+# REAL AI ENDPOINTS
+# ============================================================
 
 @app.post("/ai/predict")
-def ai_predict(body: ScenarioBody):
-    model = require_ai()
-    return model.predict(body.scenario)
+def ai_predict(
+    body: ScenarioBody
+):
+
+    return require_ai().predict(
+        body.scenario
+    )
 
 
 @app.post("/ai/report")
-def ai_report(body: ScenarioBody):
-    model = require_ai()
-    return model.full_report(body.scenario)
+def ai_report(
+    body: ScenarioBody
+):
+
+    return require_ai().full_report(
+        body.scenario
+    )
 
 
 @app.post("/ai/what-if")
-def ai_what_if(body: WhatIfAIBody):
-    model = require_ai()
-    return model.what_if(
+def ai_what_if(
+    body: WhatIfAIBody
+):
+
+    return require_ai().what_if(
         body.scenario,
-        body.changes
+        body.changes,
     )
+
+
+# ============================================================
+# MODEL 2 — ACCIDENT IMPACT
+# ============================================================
+
+_IMPACT_MAPPING = {
+
+    "collision_type":
+        "Collision_Type",
+
+    "vehicle_type":
+        "Vehicle_Category",
+
+    "speed":
+        "Impact_Speed_KMH",
+
+    "vehicles_involved":
+        "Vehicles_Involved",
+
+    "posted_speed_limit":
+        "Posted_Speed_Limit_KMH",
+
+    "lighting":
+        "Lighting_Condition",
+
+    "road_surface":
+        "Road_Surface_Condition",
+
+    "weather":
+        "Weather_Condition",
+}
+
+
+def _clean_extra(
+    extra: Dict[str, Any]
+) -> Dict[str, Any]:
+
+    cleaned = {}
+
+    for key, value in extra.items():
+
+        if value is None:
+            continue
+
+        cleaned[str(key)] = value
+
+    return cleaned
+
+
+def _build_impact_scenario(
+    body: ImpactBody,
+) -> Dict[str, Any]:
+
+    rm = require_risk_model()
+
+    scenario: Dict[str, Any] = {}
+
+    # --------------------------------------------------------
+    # Road baseline
+    # --------------------------------------------------------
+
+    if body.road_name:
+
+        try:
+
+            road_scenario = (
+                rm.build_average_scenario(
+                    body.road_name
+                )
+            )
+
+            if road_scenario:
+
+                scenario.update(
+                    road_scenario
+                )
+
+        except Exception as e:
+
+            print(
+                f"[WARN] Road scenario failed: {e}"
+            )
+
+    # --------------------------------------------------------
+    # Explicit extra fields
+    # --------------------------------------------------------
+
+    if body.extra:
+
+        scenario.update(
+            _clean_extra(
+                body.extra
+            )
+        )
+
+    # --------------------------------------------------------
+    # Frontend → ML mapping
+    # --------------------------------------------------------
+
+    body_dict = body.model_dump()
+
+    for (
+        frontend_field,
+        ml_field,
+    ) in _IMPACT_MAPPING.items():
+
+        value = body_dict.get(
+            frontend_field
+        )
+
+        if value is not None:
+
+            scenario[
+                ml_field
+            ] = value
+
+    # --------------------------------------------------------
+    # Numeric validation
+    # --------------------------------------------------------
+
+    if "Impact_Speed_KMH" in scenario:
+
+        try:
+
+            speed = float(
+                scenario[
+                    "Impact_Speed_KMH"
+                ]
+            )
+
+            if speed < 0:
+                raise ValueError
+
+            scenario[
+                "Impact_Speed_KMH"
+            ] = speed
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            raise HTTPException(
+                status_code=422,
+                detail="Impact speed غير صالحة.",
+            )
+
+    if "Posted_Speed_Limit_KMH" in scenario:
+
+        try:
+
+            limit = float(
+                scenario[
+                    "Posted_Speed_Limit_KMH"
+                ]
+            )
+
+            if limit <= 0:
+                raise ValueError
+
+            scenario[
+                "Posted_Speed_Limit_KMH"
+            ] = limit
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            raise HTTPException(
+                status_code=422,
+                detail="Posted speed limit غير صالحة.",
+            )
+
+    if "Vehicles_Involved" in scenario:
+
+        try:
+
+            vehicles = int(
+                float(
+                    scenario[
+                        "Vehicles_Involved"
+                    ]
+                )
+            )
+
+            if vehicles < 1:
+                raise ValueError
+
+            scenario[
+                "Vehicles_Involved"
+            ] = vehicles
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            raise HTTPException(
+                status_code=422,
+                detail="عدد المركبات غير صالح.",
+            )
+
+    return scenario
 
 
 @app.post("/predict-impact")
-def predict_impact(body: ImpactBody):
-    """
-    تقدير عدد الإصابات/الوفيات المتوقع لسيناريو اصطدام معيّن، باستخدام
-    final_injuries_xgboost.pkl و final_fatalities_catboost.pkl.
-    هي الـ endpoint اللي واجهة runImpactModel() فى الـ HTML متوقعاها أصلاً
-    (كانت بترجع خطأ وبتقع على fallback جافاسكريبت قبل كده).
-    """
+def predict_impact(
+    body: ImpactBody,
+):
+
     model = require_ai()
 
-    scenario: Dict[str, Any] = dict(body.extra or {})
-    if body.collision_type is not None:
-        scenario["Collision_Type"] = body.collision_type
-    if body.vehicle_type is not None:
-        scenario["Vehicle_Category"] = body.vehicle_type
-    if body.speed is not None:
-        scenario["Impact_Speed_KMH"] = body.speed
-    if body.vehicles_involved is not None:
-        scenario["Vehicles_Involved"] = body.vehicles_involved
-    if body.posted_speed_limit is not None:
-        scenario["Posted_Speed_Limit_KMH"] = body.posted_speed_limit
-
-    result = model.predict_impact(scenario)
-
-    # تسمية متوافقة مع اللي الواجهة بتدور عليه فى الـ response
-    # (d.impact_score / d.impact_level / d.recommendation)
-    result["recommendation"] = (
-        "خفّضي السرعة والتزمي بالتباعد الآمن - عوامل التأثير الحالية مرتفعة."
-        if result["impact_level"] == "مرتفع"
-        else "راجعي عوامل الخطر قبل اتخاذ القرار."
+    scenario = _build_impact_scenario(
+        body
     )
+
+    if not scenario:
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "لم يتم إرسال بيانات كافية "
+                "لبناء سيناريو الحادث."
+            ),
+        )
+
+    try:
+
+        result = model.predict_impact(
+            scenario
+        )
+
+    except Exception as e:
+
+        print(
+            f"[ERROR] predict-impact failed: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "تعذر تشغيل نموذج تأثير الحادث."
+            ),
+        )
+
+    level = result.get(
+        "impact_level"
+    )
+
+    if level == "مرتفع":
+
+        recommendation = (
+            "خفّضي السرعة والتزمي بالتباعد الآمن - "
+            "عوامل التأثير الحالية مرتفعة."
+        )
+
+    elif level == "متوسط":
+
+        recommendation = (
+            "راجعي عوامل الخطر وقللي "
+            "التدخلات عالية الخطورة."
+        )
+
+    else:
+
+        recommendation = (
+            "مستوى التأثير منخفض نسبيًا، "
+            "مع الاستمرار في الالتزام بقواعد السلامة."
+        )
+
+    result[
+        "recommendation"
+    ] = recommendation
+
+    # --------------------------------------------------------
+    # Transparent diagnostics
+    # --------------------------------------------------------
+
+    result[
+        "scenario_source"
+    ] = (
+        "road average + explicit frontend inputs"
+        if body.road_name
+        else
+        "explicit frontend inputs"
+    )
+
+    result[
+        "input_overrides"
+    ] = {
+        key: value
+        for key, value
+        in {
+            "collision_type":
+                body.collision_type,
+
+            "vehicle_type":
+                body.vehicle_type,
+
+            "speed":
+                body.speed,
+
+            "vehicles_involved":
+                body.vehicles_involved,
+
+            "posted_speed_limit":
+                body.posted_speed_limit,
+
+            "lighting":
+                body.lighting,
+
+            "road_surface":
+                body.road_surface,
+
+            "weather":
+                body.weather,
+        }.items()
+        if value is not None
+    }
+
     return result
 
 
-@app.get("/ai/controllable-factors")
+# ============================================================
+# AI METADATA
+# ============================================================
+
+@app.get(
+    "/ai/controllable-factors"
+)
 def ai_controllable_factors():
+
     return [
+
         {
-            "field": field,
-            "label": meta["label"],
-            "safe_value": meta["safe_value"],
-            "action": meta["action"]
+            "field":
+                field,
+
+            "label":
+                meta["label"],
+
+            "safe_value":
+                meta["safe_value"],
+
+            "action":
+                meta["action"],
         }
-        for field, meta in CONTROLLABLE_FACTORS.items()
+
+        for field, meta
+        in CONTROLLABLE_FACTORS.items()
     ]
 
 
-@app.get("/ai/categorical-options")
+@app.get(
+    "/ai/categorical-options"
+)
 def ai_categorical_options():
-    """القيم الفئوية الرسمية المستخرجة من الموديلات نفسها وقت التشغيل
-    (راجع ML_Integration_Spec.md قسم 4) - كل الـ Dropdowns المرتبطة
-    بالموديل الحقيقي المفروض تتبني من هنا، مش من قيم مكتوبة يدوي."""
-    model = require_ai()
-    return model.categorical_options
+
+    return require_ai().categorical_options
 
 
-@app.get("/ai/feature-importance")
-def ai_feature_importance(top: int = 15):
-    model = require_ai()
-    return model.feature_importance[:top]
+@app.get(
+    "/ai/feature-importance"
+)
+def ai_feature_importance(
+    top: int = 15,
+):
+
+    top = max(
+        1,
+        min(
+            int(top),
+            100,
+        ),
+    )
+
+    return require_ai().feature_importance[
+        :top
+    ]
 
 
-@app.get("/complaints")
-def complaints_alias(user=Depends(get_current_user)):
-    if user["role"] not in ("decision", "admin"):
-        raise HTTPException(status_code=403, detail="مسموح فقط لحسابات متخذي القرار")
-    return incidents.list_all()
+# ============================================================
+# EXCEL DATA
+# ============================================================
 
-
-@app.get("/health")
-def health():
-    return {
-        "status": "ok",
-        "ai_ready": AI_READY
-    }
-
-
-# ----------------------------------------------------
-# قراءة ملف الإكسيل وربطه بالواجهات
-# ----------------------------------------------------
-
-_EXCEL_DATA_CACHE = None  # نتيجة get_excel_data() مكاشة - راجع التعليق تحت
+_EXCEL_DATA_CACHE = None
 
 
 def get_excel_data():
-    """Return only the columns the frontend actually reads from /api/data.
-
-    مكاش فى الذاكرة (زي _load_journey_df بالظبط) بدل ما يعيد قراءة/دمج
-    ملف accidents_data.xlsx (~40 ألف صف) وتحويله لـ JSON فى كل طلب. القراءة
-    والتحويل دول كانوا بيتكرروا مع كل GET /api/data، وده اللي كان بيسبب
-    تخطي حد الذاكرة (Memory limit) على Render وإعادة تشغيل الخدمة.
-
-    كانت الدالة بترجع الجدول كامل (Accidents مدموج مع كل أعمدة Locations،
-    حوالي 27 عمود × 40 ألف صف). فحصت EgyRoad_IQ.html ولقيت إن d.data من
-    /api/data مستخدم فى مكان واحد بس (loadExcelData/loadStats) وبس كـ
-    احتياطي لو /dashboard-stats (السريع، المبني من artifacts/) فشل، وإن
-    الوحيد اللي بيتقرا فعليًا من كل صف هو Fatalities_Count وInjuries_Count
-    (زائد d.data.length نفسه). فبنرجع العمودين دول بس بدل الجدول كله - ده
-    بيقلل حجم الاستجابة بشكل كبير جدًا (من ~27 عمود لعمودين) وبيلغي الحاجة
-    لقراءة/دمج شيت Locations خالص، وده اللي كان بيسبب التأخير/الـ502 حتى
-    بعد إصلاح الـ caching والـ NaN."""
 
     global _EXCEL_DATA_CACHE
+
     if _EXCEL_DATA_CACHE is not None:
         return _EXCEL_DATA_CACHE
 
-    try:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        excel_path = os.path.join(
-            base_dir,
-            "accidents_data.xlsx"
-        )
+    # Reuse the already cached journey data.
+    df = _load_journey_df()
 
-        accidents = pd.read_excel(
-            excel_path,
-            sheet_name="Accidents",
-            usecols=lambda c: c in ("Fatalities_Count", "Injuries_Count")
-        )
+    data = df[
+        [
+            "Fatalities_Count",
+            "Injuries_Count",
+        ]
+    ].copy()
 
-        for col in ("Fatalities_Count", "Injuries_Count"):
-            if col not in accidents.columns:
-                accidents[col] = 0
-            accidents[col] = pd.to_numeric(accidents[col], errors="coerce").fillna(0)
+    records = data.to_dict(
+        orient="records"
+    )
 
-        records = accidents.to_dict(orient="records")
+    _EXCEL_DATA_CACHE = {
 
-        _EXCEL_DATA_CACHE = {
-            "count": len(records),
-            "columns": accidents.columns.tolist(),
-            "data": records
-        }
-        return _EXCEL_DATA_CACHE
+        "count":
+            len(records),
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"تعذر جلب بيانات الإكسيل: {str(e)}"
-        )
+        "columns":
+            data.columns.tolist(),
+
+        "data":
+            records,
+    }
+
+    print(
+        "[OK] /api/data cache loaded."
+    )
+
+    return _EXCEL_DATA_CACHE
 
 
 @app.get("/api/data")
 def read_data():
-    """Return the unified Accidents + Locations dataset for the HTML frontend."""
+
     return get_excel_data()
 
 
-# نفس فكرة roadwise_cache/ai_model فوق: بنملى _EXCEL_DATA_CACHE وقت تشغيل
-# السيرفر نفسه (أثناء الـ Deploy، اللي أصلًا بياخد كذا دقيقة ومنتظر)، بدل
-# ما أول مستخدم يفتح /api/data هو اللي يستنى وقت قراءة/تحليل ملف الإكسيل
-# من الديسك. أي طلب فعلي بعد كده بيرجع فورًا من الكاش.
 try:
     get_excel_data()
 except Exception as e:
-    print(f"[WARN] تعذر تحميل بيانات /api/data عند التشغيل: {e}")
+    print(
+        f"[WARN] /api/data cache failed: {e}"
+    )
 
 
-# ----------------------------------------------------
-# Gemini AI Assistant
-# ----------------------------------------------------
+# ============================================================
+# GEMINI AI ASSISTANT
+# ============================================================
 
 class AskAIRequest(BaseModel):
+
     question: str
 
 
 @app.post("/ai-assistant")
-def ai_assistant(body: AskAIRequest):
+async def ai_assistant(
+    body: AskAIRequest
+):
+
+    question = body.question.strip()
+
+    if not question:
+
+        raise HTTPException(
+            status_code=422,
+            detail="اكتبي السؤال أولًا.",
+        )
+
     cache = require_roadwise()
+
     try:
-        answer = answer_question(body.question, cache)
+
+        # Gemini / agent execution is blocking,
+        # so do not block FastAPI's event loop.
+        answer = await asyncio.to_thread(
+            answer_question,
+            question,
+            cache,
+        )
 
         return {
-            "success": True,
-            "answer": answer
+
+            "success":
+                True,
+
+            "answer":
+                answer,
         }
 
     except Exception as e:
+
+        print(
+            f"[ERROR] AI assistant failed: {e}"
+        )
+
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail=(
+                "تعذر الحصول على إجابة المساعد."
+            ),
         )
- # ----------------------------------------------------
-# Complaint Classification
-# ----------------------------------------------------
 
-class ComplaintClassificationRequest(BaseModel):
+
+# ============================================================
+# COMPLAINT CLASSIFICATION
+# ============================================================
+
+class ComplaintClassificationRequest(
+    BaseModel
+):
+
     description: str
     governorate: str = ""
     road_name: str = ""
 
 
-# تصنيفات "Report Verification AI" - مقصود إننا ما نطلعش حكم قاطع
-# True/False من غير دليل كافي. القيمة الافتراضية عند أي شك أو خطأ هي
-# "needs_review" دايمًا، مش "likely_false" - عشان ما نرفضش بلاغ حقيقي
-# غلط لمجرد إن التصنيف الآلي فشل أو مش متأكد.
-_LABELS_AR = {
-    "likely_valid": "يبدو صحيحًا",
-    "needs_review": "يحتاج مراجعة بشرية",
-    "likely_false": "يبدو غير صحيح / مشبوه",
-}
+@app.post("/classify-complaint")
+async def classify_complaint_endpoint(
+    data: ComplaintClassificationRequest,
+):
+
+    if not data.description.strip():
+
+        raise HTTPException(
+            status_code=422,
+            detail="وصف البلاغ مطلوب.",
+        )
+
+    return await asyncio.to_thread(
+        _classify_report_text,
+        data.description,
+        data.governorate,
+        data.road_name,
+    )
 
 
-def _classify_report_text(description: str, governorate: str = "", road_name: str = "") -> Dict[str, Any]:
-    """تصنيف نص البلاغ فقط (بدون الصورة) بالتصنيف الثلاثي. دالة داخلية
-    مستقلة عشان تُستخدم هنا وفي /report-incident كمان من غير تكرار كود.
+# ============================================================
+# HEALTH
+# ============================================================
 
-    ملحوظة مهمة: كانت الدالة دي قبل كده بتستخدم ask_gemini() - يعني كل
-    تصنيف بلاغ كان فعليًا بيحمّل بيانات ROADWISE بالكامل (get_roadwise_summary)
-    جوه برومبت "أجب عن سؤال متخذ القرار"، وبرومبت التصنيف ده كان بيتحط
-    جوه البرومبت الكبير ده. ده كان سبب أساسي في بطء تصنيف الشكاوى
-    ولاحتمال رجوع تصنيف غلط (بلاغ غير حقيقي يطلع "يبدو صحيحًا") بسبب
-    تلخبط الموديل بين تعليمات مختلفة. دلوقتي بتستخدم classify_complaint()
-    من ai_agent.py المستقلة تمامًا عن بيانات ROADWISE."""
-    try:
-        result = classify_complaint(description, governorate, road_name)
-    except Exception as e:
-        # أي فشل غير متوقع -> needs_review دايمًا، مش likely_false، عشان
-        # الفشل التقني ما يترجمش لرفض بلاغ حقيقي.
-        result = {
-            "classification": "needs_review",
-            "confidence": 0,
-            "reason": f"تعذر تحليل البلاغ آليًا: {str(e)}",
-        }
+@app.get("/health")
+def health():
 
     return {
-        "classification": result["classification"],
-        "classification_label_ar": _LABELS_AR[result["classification"]],
-        "confidence": result["confidence"],
-        "reason": result["reason"],
+
+        "status":
+            "ok",
+
+        "ai_ready":
+            AI_READY,
+
+        "roadwise_ready":
+            ROADWISE_READY,
+
+        "risk_model_ready":
+            risk_model is not None,
+
+        "journey_data_ready":
+            _JOURNEY_DF is not None,
+
+        "version":
+            "1.1.0",
     }
 
 
-@app.post("/classify-complaint")
-def classify_complaint_endpoint(data: ComplaintClassificationRequest):
-    return _classify_report_text(data.description, data.governorate, data.road_name)
+# ============================================================
+# STARTUP
+# ============================================================
+
+print(
+    "[READY] EgyRoad IQ backend initialization complete."
+)
+
+
+# ============================================================
+# RUN
+# ============================================================
+
 if __name__ == "__main__":
+
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000)
+
+    # IMPORTANT:
+    # Pass the app object directly.
+    # Do NOT use "main:app" here because Python would
+    # import main.py again and initialize the models twice.
+
+    uvicorn.run(
+        app,
+        host="127.0.0.1",
+        port=8000,
+        reload=False,
+        log_level="info",
+    )
