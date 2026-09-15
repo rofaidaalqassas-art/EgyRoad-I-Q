@@ -368,6 +368,15 @@ def _load_journey_df():
     return df
 
 
+# نفس فكرة get_excel_data/roadwise_cache: بنملى _JOURNEY_DF وقت تشغيل
+# السيرفر نفسه بدل ما نستنى أول مستخدم يفتح /journey-options، عشان ميحصلش
+# تأخير/502 وقت أول طلب فعلي بعد أي Deploy أو Restart.
+try:
+    _load_journey_df()
+except Exception as e:
+    print(f"[WARN] تعذر تحميل بيانات الرحلات عند التشغيل: {e}")
+
+
 def _road_raw_index(rows) -> float:
     """المؤشر الخام (raw) المشتق من نتائج الحوادث الفعلية لمجموعة صفوف
     طريق واحد. نفس صيغة الحساب القديمة (فتلات/إصابات مرجّحة لكل حادثة) -
