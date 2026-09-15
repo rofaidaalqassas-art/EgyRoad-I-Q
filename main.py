@@ -790,6 +790,7 @@ class ReviewIncidentBody(BaseModel):
     incident_id: str
     status: str
     classification: Optional[str] = None
+    comment: Optional[str] = None
 
 
 @app.post("/review-incident")
@@ -806,6 +807,8 @@ def review_incident(body: ReviewIncidentBody, user=Depends(get_current_user)):
     fields: Dict[str, Any] = {"status": body.status, "reviewed_by": user["sub"]}
     if body.classification:
         fields["classification"] = body.classification
+    if body.comment is not None:
+        fields["decision_comment"] = body.comment
 
     updated = incidents.update(body.incident_id, **fields)
 
