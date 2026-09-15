@@ -346,7 +346,11 @@ def _load_journey_df():
     if not excel_path:
         raise HTTPException(status_code=500, detail="ملف بيانات الحوادث غير موجود داخل المشروع.")
     try:
-        df = pd.read_excel(excel_path, sheet_name="Accidents")
+        df = pd.read_excel(
+            excel_path,
+            sheet_name="Accidents",
+            usecols=lambda c: c in ("Governorate_EN", "Highway_Name", "Fatalities_Count", "Injuries_Count")
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"تعذر قراءة بيانات الحوادث: {exc}")
     required = ["Governorate_EN", "Highway_Name"]
@@ -974,6 +978,16 @@ def get_excel_data():
 def read_data():
     """Return the unified Accidents + Locations dataset for the HTML frontend."""
     return get_excel_data()
+
+
+# نفس فكرة roadwise_cache/ai_model فوق: بنملى _EXCEL_DATA_CACHE وقت تشغيل
+# السيرفر نفسه (أثناء الـ Deploy، اللي أصلًا بياخد كذا دقيقة ومنتظر)، بدل
+# ما أول مستخدم يفتح /api/data هو اللي يستنى وقت قراءة/تحليل ملف الإكسيل
+# من الديسك. أي طلب فعلي بعد كده بيرجع فورًا من الكاش.
+try:
+    get_excel_data()
+except Exception as e:
+    print(f"[WARN] تعذر تحميل بيانات /api/data عند التشغيل: {e}")
 
 
 # ----------------------------------------------------
