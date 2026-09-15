@@ -58,6 +58,8 @@ main{padding:45px 0 80px}.section-head{display:flex;justify-content:space-betwee
 <div class="split"><div class="field"><label>السرعة km/h</label><input id="m2Speed" min="0" type="number" value="80"/></div>
 <div class="field"><label>عدد المركبات</label><input id="m2Vehicles" min="1" type="number" value="2"/></div></div>
 <div class="field"><label>الحد الأقصى المسموح به km/h</label><input id="m2SpeedLimit" min="0" type="number" value="90"/></div>
+<div class="split"><div class="field"><label>الإضاءة</label><select id="m2Lighting"><option>Daylight</option><option>Night Lit</option><option>Night Unlit</option><option>Dawn/Dusk</option></select></div><div class="field"><label>حالة الطريق</label><select id="m2Surface"><option>Good/Dry</option><option>Wet</option><option>Poor</option><option>Debris</option><option>Rough</option></select></div></div>
+<div class="field"><label>حالة الطقس</label><select id="m2Weather"><option>Clear</option><option>Rain</option><option>Fog</option><option>Dust</option></select></div>
 <button class="btn soft" onclick="runModel2()">Predict Impact</button>
 <div class="result hidden" id="m2Result"></div>
 </div>
@@ -196,12 +198,12 @@ async function runModel1(){
 async function runModel2(){
   const box=document.getElementById('m2Result');box.classList.remove('hidden');box.innerHTML='<span class="ai-loading">جاري تقدير التأثير...</span>';
   try{
-    const d=await api('/predict-impact',{method:'POST',body:JSON.stringify({collision_type:m2Collision.value,vehicle_type:m2Vehicle.value,speed:Number(m2Speed.value),vehicles_involved:Number(m2Vehicles.value),posted_speed_limit:Number(m2SpeedLimit.value),extra:{}})});
+    const d=await api('/predict-impact',{method:'POST',body:JSON.stringify({collision_type:m2Collision.value,vehicle_type:m2Vehicle.value,speed:Number(m2Speed.value),vehicles_involved:Number(m2Vehicles.value),posted_speed_limit:Number(m2SpeedLimit.value),extra:{Lighting_Condition:m2Lighting.value,Road_Surface_Condition:m2Surface.value,Weather_Condition:m2Weather.value}})});
     box.innerHTML=`<b>Impact Score: ${Number(d.impact_score||0).toFixed(0)}/100</b><br>مستوى التأثير: <strong>${esc(d.impact_level||'—')}</strong><br>الإصابات المتوقعة: ${Number(d.predicted_injuries||0).toFixed(0)}<br>الوفيات المتوقعة: ${Number(d.predicted_fatalities||0).toFixed(0)}<br><span class="muted">${esc(d.recommendation||'')}</span>`;
   }catch(e){box.innerHTML='<span class="danger">تعذر تشغيل Model 2: '+esc(e.message)+'</span>'}
 }
 async function applyCategoricalOptions(){
-  const map={mlRoadType:'Road_Type',mlLighting:'Lighting_Condition',mlSurface:'Road_Surface_Condition',mlSeatbelt:'Seatbelt_Used',mlCollision:'Collision_Type',mlVehicle:'Vehicle_Category',m2Collision:'Collision_Type',m2Vehicle:'Vehicle_Category'};
+  const map={mlRoadType:'Road_Type',mlLighting:'Lighting_Condition',mlSurface:'Road_Surface_Condition',mlSeatbelt:'Seatbelt_Used',mlCollision:'Collision_Type',mlVehicle:'Vehicle_Category',m2Collision:'Collision_Type',m2Vehicle:'Vehicle_Category',m2Lighting:'Lighting_Condition',m2Surface:'Road_Surface_Condition',m2Weather:'Weather_Condition'};
   try{
     const opts=await api('/ai/categorical-options');
     Object.keys(map).forEach(id=>{
@@ -241,7 +243,11 @@ async function runModel3(){
     const isImprovement=reduction>0.05,isWorse=reduction<-0.05;
     const deltaLabel=isImprovement?`انخفاض الخطورة: ${reduction.toFixed(1)}%`:isWorse?`زيادة في الخطورة: ${Math.abs(reduction).toFixed(1)}%`:`لا يوجد فرق ملحوظ (${reduction.toFixed(1)}%)`;
     const deltaColor=isImprovement?'var(--green)':isWorse?'var(--red)':'var(--muted)';
-    box.innerHTML=`<b>قبل التدخل: ${before.toFixed(1)}/100</b> <span class="muted">(${esc(d.original_risk_level||'')})</span><br><b>بعد التدخل: ${after.toFixed(1)}/100</b> <span class="muted">(${esc(d.new_risk_level||'')})</span><br><strong style="color:${deltaColor}">${deltaLabel}</strong>${isWorse?`<br><span class="muted" style="font-size:.8rem">الموديل بيعكس ارتباط تاريخي فى البيانات، مش بالضرورة علاقة سببية مباشرة - خصوصًا لما الفرق صغير.</span>`:''}`;
+    const nearCeiling=before>=85||before<=15;
+    let note='';
+    if(nearCeiling){note+=`<br><span class="muted" style="font-size:.8rem">الطريق ده أصلاً قريب من أقصى/أقل درجة في المقياس (${before.toFixed(1)}/100)، فمساحة التحسّن أو التراجع الممكنة محدودة أصلاً - مش قصور في التدخل المقترح.</span>`}
+    if(isWorse){note+=`<br><span class="muted" style="font-size:.8rem">الموديل بيعكس ارتباط تاريخي في البيانات، مش بالضرورة علاقة سببية مباشرة - خصوصًا لما الفرق صغير.</span>`}
+    box.innerHTML=`<b>قبل التدخل: ${before.toFixed(1)}/100</b> <span class="muted">(${esc(d.original_risk_level||'')})</span><br><b>بعد التدخل: ${after.toFixed(1)}/100</b> <span class="muted">(${esc(d.new_risk_level||'')})</span><br><strong style="color:${deltaColor}">${deltaLabel}</strong>${note}`;
   }catch(e){box.innerHTML='<span class="danger">تعذر تشغيل Model 3: '+esc(e.message)+'</span>'}
 }
 function populateThreeModels(){
