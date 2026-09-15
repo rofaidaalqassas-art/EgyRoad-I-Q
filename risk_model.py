@@ -1,5 +1,4 @@
-
-
+# -*- coding: utf-8 -*-
 
 """
 risk_model.py
@@ -10,24 +9,28 @@ risk_model.py
 مسؤول عن:
 1. تحميل ملفات الـ artifacts.
 2. تحميل بيانات الحوادث من Excel.
-3. حساب تقييم الرحلة بالطريقة الإحصائية القديمة.
-4. حساب What-If بالطريقة اليدوية.
-5. بناء Scenario حقيقي من بيانات الحوادث لطريق معين.
-
-ملاحظة:
-التنبؤ الحقيقي بالـ AI موجود في:
-    train_model.py
-    ai_model.py
+3. دمج Fact_Accidents مع:
+       Dim_Location
+       Dim_Vehicle
+       Dim_Driver
+       Dim_Date
+       Dim_Cause
+4. حساب تقييم الرحلة بالطريقة الإحصائية القديمة.
+5. حساب What-If بالطريقة اليدوية.
+6. بناء Scenario حقيقي وكامل من بيانات الحوادث لطريق معين.
 
 مهم:
-هذا الملف لا يستورد نفسه، ولا يستورد main.py.
+- التنبؤ الحقيقي بالـ AI موجود في ai_model.py.
+- هذا الملف لا يستورد main.py.
+- هذا الملف لا يستورد نفسه.
+- لا يتم اختراع قيم للـ ML features طالما يمكن استخراجها من Excel.
 """
-
 
 import json
 import os
 import re
 
+import numpy as np
 import pandas as pd
 
 
@@ -37,7 +40,14 @@ import pandas as pd
 
 ARTIFACTS_DIR = "artifacts"
 
-ACCIDENTS_FILE = "accidents_data.xlsx"
+# الملف الأساسي الحالي
+ACCIDENTS_FILE = "accidents_data1.xlsx"
+
+# دعم الاسم القديم أيضًا
+FALLBACK_ACCIDENTS_FILES = [
+    "accidents_data.xlsx",
+    "accidents_data1.xlsx",
+]
 
 
 # =========================================================
@@ -53,6 +63,7 @@ FACTOR_TO_COMPONENT = {
 
     "Speed Reduction": "speeding",
 }
+
 
 # =========================================================
 # RISK COMPONENT WEIGHTS
@@ -83,7 +94,13 @@ class RiskModel:
 
         self.dir = artifacts_dir
 
-        self.accidents_file = accidents_file
+        # -------------------------------------------------
+        # Resolve Excel file
+        # -------------------------------------------------
+
+        self.accidents_file = self._resolve_accidents_file(
+            accidents_file
+        )
 
         # -------------------------------------------------
         # Load artifacts
@@ -104,6 +121,39 @@ class RiskModel:
         self.dashboard_stats = self._load(
             "dashboard_stats.json"
         )
+
+        # -------------------------------------------------
+        # Load model config if available
+        # -------------------------------------------------
+
+        self.model_config = self._load_model_config()
+
+        self.classification_features = []
+        self.impact_features = []
+
+        if self.model_config:
+
+            try:
+
+                self.classification_features = (
+                    self.model_config
+                    .get("classification", {})
+                    .get("features", [])
+                )
+
+            except Exception:
+                self.classification_features = []
+
+            try:
+
+                self.impact_features = (
+                    self.model_config
+                    .get("injuries", {})
+                    .get("features", [])
+                )
+
+            except Exception:
+                self.impact_features = []
 
         # -------------------------------------------------
         # Roads dictionary
@@ -127,12 +177,37 @@ class RiskModel:
                 self.roads_by_name[key] = road
 
         # -------------------------------------------------
-        # Load real accident data
+        # Load and merge real accident data
         # -------------------------------------------------
 
         self.accidents_data = (
             self._load_accidents_data()
         )
+
+        # -------------------------------------------------
+        # Startup information
+        # -------------------------------------------------
+
+        print(
+            "[INFO] RiskModel initialized."
+        )
+
+        print(
+            "[INFO] Excel file:",
+            self.accidents_file
+        )
+
+        if self.accidents_data is not None:
+
+            print(
+                "[INFO] Final merged accident rows:",
+                len(self.accidents_data)
+            )
+
+            print(
+                "[INFO] Final merged columns:",
+                len(self.accidents_data.columns)
+            )
 
 
     # =====================================================
@@ -143,7 +218,9 @@ class RiskModel:
     def _normalize_text(value):
 
         if value is None:
+            return ""
 
+        if isinstance(value, float) and pd.isna(value):
             return ""
 
         text = str(value).strip().lower()
@@ -155,6 +232,67 @@ class RiskModel:
         )
 
         return text
+
+
+    # =====================================================
+    # RESOLVE EXCEL FILE
+    # =====================================================
+
+    def _resolve_accidents_file(
+        self,
+        requested_file
+    ):
+
+        # -------------------------------------------------
+        # First requested file
+        # -------------------------------------------------
+
+        if requested_file and os.path.exists(
+            requested_file
+        ):
+
+            return requested_file
+
+        # -------------------------------------------------
+        # Fallback files
+        # -------------------------------------------------
+
+        candidates = []
+
+        if requested_file:
+            candidates.append(
+                requested_file
+            )
+
+        candidates.extend(
+            FALLBACK_ACCIDENTS_FILES
+        )
+
+        for filename in candidates:
+
+            if os.path.exists(filename):
+
+                print(
+                    "[INFO] Using Excel file:",
+                    filename
+                )
+
+                return filename
+
+        # -------------------------------------------------
+        # Nothing found
+        # -------------------------------------------------
+
+        print(
+            "[WARNING] لم يتم العثور على ملف Excel."
+        )
+
+        print(
+            "[WARNING] الملفات التي تم البحث عنها:",
+            candidates
+        )
+
+        return requested_file
 
 
     # =====================================================
@@ -187,27 +325,300 @@ class RiskModel:
 
 
     # =====================================================
-    # LOAD ACCIDENTS EXCEL
+    # LOAD MODEL CONFIG
     # =====================================================
 
-    def _load_accidents_data(self):
+    def _load_model_config(self):
 
-        if not os.path.exists(
-            self.accidents_file
-        ):
+        path = os.path.join(
+            self.dir,
+            "final_model_config.pkl"
+        )
+
+        if not os.path.exists(path):
 
             print(
-                f"[WARNING] ملف الحوادث غير موجود: "
-                f"{self.accidents_file}"
+                "[INFO] final_model_config.pkl غير موجود."
             )
 
             return None
 
         try:
 
+            import joblib
+
+            config = joblib.load(
+                path
+            )
+
+            print(
+                "[INFO] Loaded final_model_config.pkl"
+            )
+
+            return config
+
+        except Exception as error:
+
+            print(
+                "[WARNING] Failed to load model config:",
+                error
+            )
+
+            return None
+
+
+    # =====================================================
+    # READ SHEET SAFELY
+    # =====================================================
+
+    def _read_sheet(
+        self,
+        excel_file,
+        sheet_name
+    ):
+
+        try:
+
+            df = pd.read_excel(
+                excel_file,
+                sheet_name=sheet_name
+            )
+
+            df.columns = [
+                str(column).strip()
+                for column in df.columns
+            ]
+
+            return df
+
+        except Exception as error:
+
+            print(
+                f"[WARNING] Failed reading sheet "
+                f"'{sheet_name}': {error}"
+            )
+
+            return None
+
+
+    # =====================================================
+    # FIND SHEET
+    # =====================================================
+
+    def _find_sheet(
+        self,
+        sheet_names,
+        candidates
+    ):
+
+        normalized = {}
+
+        for sheet in sheet_names:
+
+            normalized[
+                self._normalize_text(sheet)
+            ] = sheet
+
+        for candidate in candidates:
+
+            key = self._normalize_text(
+                candidate
+            )
+
+            if key in normalized:
+
+                return normalized[key]
+
+        return None
+
+
+    # =====================================================
+    # LOAD DATE DIMENSION
+    # =====================================================
+
+    def _load_date_dimension(
+        self,
+        excel_file,
+        sheet_name
+    ):
+
+        try:
+
             # -------------------------------------------------
-            # قراءة Excel
+            # اقرأ بدون header لأن Dim_Date في الملف الحالي
+            # قد يكون أول صف فيها هو البيانات وليس header.
             # -------------------------------------------------
+
+            raw = pd.read_excel(
+                excel_file,
+                sheet_name=sheet_name,
+                header=None
+            )
+
+            if raw.empty:
+
+                return None
+
+            # -------------------------------------------------
+            # Expected structure:
+            #
+            # Date_Key
+            # Date
+            # Year
+            # Month
+            # Month_Name
+            # Day
+            # Day_of_Week
+            # -------------------------------------------------
+
+            expected_columns = [
+                "Date_Key",
+                "Date",
+                "Year",
+                "Month",
+                "Month_Name",
+                "Day",
+                "Day_of_Week",
+            ]
+
+            # -------------------------------------------------
+            # Detect whether first row is actually a header
+            # -------------------------------------------------
+
+            first_row = [
+                self._normalize_text(value)
+                for value in raw.iloc[0].tolist()
+            ]
+
+            header_keywords = {
+                "date_key",
+                "date",
+                "year",
+                "month",
+                "month_name",
+                "day",
+                "day_of_week",
+            }
+
+            looks_like_header = bool(
+                set(first_row)
+                .intersection(
+                    header_keywords
+                )
+            )
+
+            if looks_like_header:
+
+                raw = raw.iloc[1:].reset_index(
+                    drop=True
+                )
+
+            # -------------------------------------------------
+            # Keep expected number of columns
+            # -------------------------------------------------
+
+            if raw.shape[1] >= len(
+                expected_columns
+            ):
+
+                raw = raw.iloc[
+                    :,
+                    :len(expected_columns)
+                ]
+
+                raw.columns = expected_columns
+
+            else:
+
+                print(
+                    "[WARNING] Dim_Date columns أقل من المتوقع."
+                )
+
+                return None
+
+            # -------------------------------------------------
+            # Clean Date_Key
+            # -------------------------------------------------
+
+            raw["Date_Key"] = pd.to_numeric(
+                raw["Date_Key"],
+                errors="coerce"
+            )
+
+            raw = raw.dropna(
+                subset=["Date_Key"]
+            )
+
+            raw["Date_Key"] = (
+                raw["Date_Key"]
+                .astype("Int64")
+            )
+
+            # -------------------------------------------------
+            # Numeric date fields
+            # -------------------------------------------------
+
+            for column in [
+                "Year",
+                "Month",
+                "Day",
+                "Day_of_Week",
+            ]:
+
+                raw[column] = pd.to_numeric(
+                    raw[column],
+                    errors="coerce"
+                )
+
+            # -------------------------------------------------
+            # Date field
+            # -------------------------------------------------
+
+            raw["Date"] = pd.to_datetime(
+                raw["Date"],
+                errors="coerce"
+            )
+
+            print(
+                "[INFO] Dim_Date loaded:",
+                len(raw),
+                "rows"
+            )
+
+            return raw
+
+        except Exception as error:
+
+            print(
+                "[WARNING] Failed loading Dim_Date:",
+                error
+            )
+
+            return None
+
+
+    # =====================================================
+    # LOAD ACCIDENTS EXCEL
+    # =====================================================
+
+    def _load_accidents_data(self):
+
+        if not self.accidents_file:
+
+            return None
+
+        if not os.path.exists(
+            self.accidents_file
+        ):
+
+            print(
+                "[WARNING] ملف الحوادث غير موجود:",
+                self.accidents_file
+            )
+
+            return None
+
+        try:
 
             excel_file = pd.ExcelFile(
                 self.accidents_file
@@ -220,164 +631,500 @@ class RiskModel:
                 sheet_names
             )
 
-            # -------------------------------------------------
-            # Sheets مفضلة
-            # -------------------------------------------------
+            # =================================================
+            # FACT ACCIDENTS
+            # =================================================
 
-            preferred_sheets = [
-                "Accidents",
-                "accidents",
-                "Fact_Accidents",
-                "FACT_ACCIDENTS",
-                "Accident",
-                "Data",
-            ]
+            fact_sheet = self._find_sheet(
+                sheet_names,
+                [
+                    "Fact_Accidents",
+                    "FACT_ACCIDENTS",
+                    "Accidents",
+                    "accidents",
+                    "Accident",
+                    "Data",
+                ]
+            )
 
-            selected_sheet = None
+            if fact_sheet is None:
 
-            normalized_sheets = {}
-
-            for sheet in sheet_names:
-
-                normalized_sheets[
-                    self._normalize_text(sheet)
-                ] = sheet
-
-            # -------------------------------------------------
-            # البحث عن Sheet معروف
-            # -------------------------------------------------
-
-            for preferred in preferred_sheets:
-
-                key = self._normalize_text(
-                    preferred
+                print(
+                    "[WARNING] لم يتم العثور على Fact_Accidents."
                 )
 
-                if key in normalized_sheets:
+                return None
 
-                    selected_sheet = (
-                        normalized_sheets[key]
-                    )
+            fact = self._read_sheet(
+                excel_file,
+                fact_sheet
+            )
 
-                    break
+            if fact is None or fact.empty:
 
-            # -------------------------------------------------
-            # لو مش موجود، ابحث عن Sheet
-            # يحتوي على عمود طريق
-            # -------------------------------------------------
+                print(
+                    "[WARNING] Fact_Accidents فارغ."
+                )
 
-            if selected_sheet is None:
-
-                road_candidates = {
-                    "Highway_Name",
-                    "Road_Name",
-                    "Road",
-                    "RoadName",
-                    "Highway",
-                }
-
-                for sheet in sheet_names:
-
-                    try:
-
-                        temp_df = pd.read_excel(
-                            excel_file,
-                            sheet_name=sheet,
-                            nrows=5,
-                        )
-
-                        temp_df.columns = [
-                            str(column).strip()
-                            for column in temp_df.columns
-                        ]
-
-                        columns = set(
-                            temp_df.columns
-                        )
-
-                        if columns.intersection(
-                            road_candidates
-                        ):
-
-                            selected_sheet = sheet
-
-                            break
-
-                    except Exception:
-
-                        continue
-
-            # -------------------------------------------------
-            # لو لسه مش موجود، استخدم أول Sheet
-            # -------------------------------------------------
-
-            if selected_sheet is None:
-
-                selected_sheet = sheet_names[0]
+                return None
 
             print(
-                f"[INFO] Using Excel sheet: "
-                f"'{selected_sheet}'"
+                "[INFO] Fact sheet:",
+                fact_sheet
             )
 
-            # -------------------------------------------------
-            # قراءة البيانات - أعمدة build_average_scenario بس (زائد كل
-            # أسماء عمود الطريق المحتملة اللي _find_road_column بيدوّر
-            # عليها) بدل الشيت كامل - نفس الأسلوب المستخدم فى باقي الملف
-            # (_load_journey_df/get_excel_data) لتقليل وقت التشغيل.
-            # -------------------------------------------------
-
-            _NEEDED_COLS = {
-                "Vehicles_Involved", "Impact_Speed_KMH",
-                "Posted_Speed_Limit_KMH", "Emergency_Response_Time_Min",
-                "AADT_Volume", "Hour_24",
-                "Weather_Condition", "Lighting_Condition",
-                "Road_Surface_Condition", "Collision_Type", "Road_Type",
-                "Governorate_EN", "Vehicle_Category",
-                "Highway_Name", "Road_Name", "Road", "RoadName",
-                "Highway", "Street_Name", "Road_Name_EN",
-            }
-
-            df = pd.read_excel(
-                excel_file,
-                sheet_name=selected_sheet,
-                usecols=lambda c: c in _NEEDED_COLS,
+            print(
+                "[INFO] Fact rows:",
+                len(fact)
             )
 
-            # -------------------------------------------------
-            # تنظيف أسماء الأعمدة
-            # -------------------------------------------------
+            # =================================================
+            # LOCATION
+            # =================================================
 
-            df.columns = [
+            location_sheet = self._find_sheet(
+                sheet_names,
+                [
+                    "Dim_Location",
+                    "Locations",
+                    "Location",
+                ]
+            )
+
+            if location_sheet:
+
+                location = self._read_sheet(
+                    excel_file,
+                    location_sheet
+                )
+
+                if location is not None:
+
+                    fact = self._merge_dimension(
+                        fact,
+                        location,
+                        left_key="Location_ID",
+                        right_key="Location_ID",
+                        dimension_name="Dim_Location"
+                    )
+
+            # =================================================
+            # VEHICLE
+            # =================================================
+
+            vehicle_sheet = self._find_sheet(
+                sheet_names,
+                [
+                    "Dim_Vehicle",
+                    "Vehicles",
+                    "Vehicle",
+                ]
+            )
+
+            if vehicle_sheet:
+
+                vehicle = self._read_sheet(
+                    excel_file,
+                    vehicle_sheet
+                )
+
+                if vehicle is not None:
+
+                    fact = self._merge_dimension(
+                        fact,
+                        vehicle,
+                        left_key="Primary_Vehicle_ID",
+                        right_key="Vehicle_ID",
+                        dimension_name="Dim_Vehicle"
+                    )
+
+            # =================================================
+            # DRIVER
+            # =================================================
+
+            driver_sheet = self._find_sheet(
+                sheet_names,
+                [
+                    "Dim_Driver",
+                    "Drivers",
+                    "Driver",
+                ]
+            )
+
+            if driver_sheet:
+
+                driver = self._read_sheet(
+                    excel_file,
+                    driver_sheet
+                )
+
+                if driver is not None:
+
+                    fact = self._merge_dimension(
+                        fact,
+                        driver,
+                        left_key="Primary_Driver_ID",
+                        right_key="Driver_ID",
+                        dimension_name="Dim_Driver"
+                    )
+
+            # =================================================
+            # DATE
+            # =================================================
+
+            date_sheet = self._find_sheet(
+                sheet_names,
+                [
+                    "Dim_Date",
+                    "Dates",
+                    "Date",
+                ]
+            )
+
+            if date_sheet:
+
+                date = self._load_date_dimension(
+                    excel_file,
+                    date_sheet
+                )
+
+                if date is not None:
+
+                    fact = self._merge_dimension(
+                        fact,
+                        date,
+                        left_key="Date_ID",
+                        right_key="Date_Key",
+                        dimension_name="Dim_Date"
+                    )
+
+            # =================================================
+            # CAUSE
+            # =================================================
+
+            cause_sheet = self._find_sheet(
+                sheet_names,
+                [
+                    "Dim_Cause",
+                    "Causes",
+                    "Cause",
+                ]
+            )
+
+            if cause_sheet:
+
+                cause = self._read_sheet(
+                    excel_file,
+                    cause_sheet
+                )
+
+                if cause is not None:
+
+                    fact = self._merge_dimension(
+                        fact,
+                        cause,
+                        left_key="Primary_Cause_ID",
+                        right_key="Cause_ID",
+                        dimension_name="Dim_Cause"
+                    )
+
+            # =================================================
+            # Remove duplicated columns created by merges
+            # =================================================
+
+            fact = self._clean_merged_columns(
+                fact
+            )
+
+            # =================================================
+            # Create engineered fields
+            # =================================================
+
+            fact = self._create_engineered_fields(
+                fact
+            )
+
+            # =================================================
+            # Clean column names
+            # =================================================
+
+            fact.columns = [
                 str(column).strip()
-                for column in df.columns
+                for column in fact.columns
             ]
 
             print(
-                f"[INFO] Loaded accidents data: "
-                f"{len(df)} rows from "
-                f"'{self.accidents_file}' "
-                f"(sheet: {selected_sheet})"
+                "[INFO] Final merged columns:"
             )
 
             print(
-                "[INFO] Accident columns:"
+                list(fact.columns)
             )
 
             print(
-                list(df.columns)
+                "[INFO] Final merged rows:",
+                len(fact)
             )
 
-            return df
+            return fact
 
         except Exception as error:
 
             print(
-                "[WARNING] Failed to load "
-                f"accident data: {error}"
+                "[WARNING] Failed to load accident data:"
+            )
+
+            print(
+                f"[WARNING] {type(error).__name__}: {error}"
             )
 
             return None
+
+
+    # =====================================================
+    # MERGE DIMENSION
+    # =====================================================
+
+    def _merge_dimension(
+        self,
+        fact,
+        dimension,
+        left_key,
+        right_key,
+        dimension_name
+    ):
+
+        if left_key not in fact.columns:
+
+            print(
+                f"[WARNING] {left_key} غير موجود في Fact."
+            )
+
+            return fact
+
+        if right_key not in dimension.columns:
+
+            print(
+                f"[WARNING] {right_key} غير موجود في "
+                f"{dimension_name}."
+            )
+
+            return fact
+
+        left = fact.copy()
+        right = dimension.copy()
+
+        # -------------------------------------------------
+        # Normalize keys
+        # -------------------------------------------------
+
+        left_key_values = pd.to_numeric(
+            left[left_key],
+            errors="coerce"
+        )
+
+        right_key_values = pd.to_numeric(
+            right[right_key],
+            errors="coerce"
+        )
+
+        left[left_key] = left_key_values
+        right[right_key] = right_key_values
+
+        # -------------------------------------------------
+        # Remove duplicated key rows
+        # -------------------------------------------------
+
+        right = right.drop_duplicates(
+            subset=[right_key],
+            keep="first"
+        )
+
+        # -------------------------------------------------
+        # Avoid duplicate columns
+        # -------------------------------------------------
+
+        duplicate_columns = [
+            column
+            for column in right.columns
+            if column != right_key
+            and column in left.columns
+        ]
+
+        if duplicate_columns:
+
+            # Fact_Accidents is the authoritative source
+            # for columns already existing there.
+            right = right.drop(
+                columns=duplicate_columns
+            )
+
+        # -------------------------------------------------
+        # Merge
+        # -------------------------------------------------
+
+        merged = left.merge(
+            right,
+            how="left",
+            left_on=left_key,
+            right_on=right_key,
+            sort=False
+        )
+
+        if right_key != left_key:
+
+            if right_key in merged.columns:
+
+                merged = merged.drop(
+                    columns=[right_key]
+                )
+
+        print(
+            f"[INFO] Merged {dimension_name}:",
+            len(merged),
+            "rows"
+        )
+
+        return merged
+
+
+    # =====================================================
+    # CLEAN MERGED COLUMNS
+    # =====================================================
+
+    def _clean_merged_columns(
+        self,
+        df
+    ):
+
+        df = df.copy()
+
+        # -------------------------------------------------
+        # Remove pandas merge suffixes if any
+        # -------------------------------------------------
+
+        rename_map = {}
+
+        for column in df.columns:
+
+            if column.endswith("_x"):
+
+                base = column[:-2]
+
+                if base not in df.columns:
+
+                    rename_map[column] = base
+
+            elif column.endswith("_y"):
+
+                base = column[:-2]
+
+                if base in df.columns:
+
+                    continue
+
+        if rename_map:
+
+            df = df.rename(
+                columns=rename_map
+            )
+
+        return df
+
+
+    # =====================================================
+    # ENGINEERED FIELDS
+    # =====================================================
+
+    def _create_engineered_fields(
+        self,
+        df
+    ):
+
+        df = df.copy()
+
+        # -------------------------------------------------
+        # Date fields
+        # -------------------------------------------------
+
+        if "Date" in df.columns:
+
+            date_values = pd.to_datetime(
+                df["Date"],
+                errors="coerce"
+            )
+
+            if "Year" not in df.columns:
+
+                df["Year"] = (
+                    date_values.dt.year
+                )
+
+            if "Month" not in df.columns:
+
+                df["Month"] = (
+                    date_values.dt.month
+                )
+
+            if "Day" not in df.columns:
+
+                df["Day"] = (
+                    date_values.dt.day
+                )
+
+            if "Day_of_Week" not in df.columns:
+
+                # Monday=0 ... Sunday=6
+                # Convert to 1...7 to match
+                # common dataset representation.
+                df["Day_of_Week"] = (
+                    date_values.dt.dayofweek + 1
+                )
+
+        # -------------------------------------------------
+        # Speed derived features
+        # -------------------------------------------------
+
+        if (
+            "Impact_Speed_KMH" in df.columns
+            and
+            "Posted_Speed_Limit_KMH" in df.columns
+        ):
+
+            speed = pd.to_numeric(
+                df["Impact_Speed_KMH"],
+                errors="coerce"
+            )
+
+            limit = pd.to_numeric(
+                df["Posted_Speed_Limit_KMH"],
+                errors="coerce"
+            )
+
+            df["Speed_Over_Limit_KMH"] = (
+                speed - limit
+            ).clip(
+                lower=0
+            )
+
+            df["Speed_Ratio"] = np.where(
+                limit > 0,
+                speed / limit,
+                np.nan
+            )
+
+        # -------------------------------------------------
+        # Hour
+        # -------------------------------------------------
+
+        if "Hour_24" in df.columns:
+
+            df["Hour_24"] = pd.to_numeric(
+                df["Hour_24"],
+                errors="coerce"
+            )
+
+        return df
 
 
     # =====================================================
@@ -554,6 +1301,68 @@ class RiskModel:
 
 
     # =====================================================
+    # GET MODE
+    # =====================================================
+
+    @staticmethod
+    def _get_mode(
+        series
+    ):
+
+        if series is None:
+            return None
+
+        values = (
+            series
+            .dropna()
+            .astype(str)
+            .str.strip()
+        )
+
+        values = values[
+            values != ""
+        ]
+
+        if values.empty:
+            return None
+
+        modes = values.mode()
+
+        if modes.empty:
+            return None
+
+        return str(
+            modes.iloc[0]
+        )
+
+
+    # =====================================================
+    # GET NUMERIC MEAN
+    # =====================================================
+
+    @staticmethod
+    def _get_mean(
+        series
+    ):
+
+        if series is None:
+            return None
+
+        values = pd.to_numeric(
+            series,
+            errors="coerce"
+        ).dropna()
+
+        if values.empty:
+            return None
+
+        return round(
+            float(values.mean()),
+            2
+        )
+
+
+    # =====================================================
     # BUILD AVERAGE SCENARIO
     # =====================================================
 
@@ -563,7 +1372,7 @@ class RiskModel:
     ):
 
         """
-        يبني Scenario حقيقي من بيانات الحوادث
+        يبني Scenario حقيقي وكامل من بيانات الحوادث
         الخاصة بالطريق.
 
         Numeric:
@@ -571,6 +1380,11 @@ class RiskModel:
 
         Categorical:
             mode
+
+        Location / Vehicle / Driver / Date:
+            يتم أخذها من الـ merged dataset.
+
+        لا يتم اختراع قيم ML features.
         """
 
         road_df = self._get_road_dataframe(
@@ -590,29 +1404,56 @@ class RiskModel:
 
             return None
 
-        # -------------------------------------------------
-        # Base scenario
-        # -------------------------------------------------
+        # =================================================
+        # BASE SCENARIO
+        # =================================================
 
         scenario = {
-            "road_name": road_name,
-            "source": "real_accident_data",
-            "accident_count": int(
-                len(road_df)
-            ),
+
+            "road_name":
+                road_name,
+
+            "source":
+                "real_accident_data",
+
+            "accident_count":
+                int(len(road_df)),
         }
 
-        # -------------------------------------------------
-        # Numeric columns
-        # -------------------------------------------------
+        # =================================================
+        # NUMERIC FEATURES
+        # =================================================
 
         numeric_columns = [
+
+            # Accident
             "Vehicles_Involved",
             "Impact_Speed_KMH",
             "Posted_Speed_Limit_KMH",
             "Emergency_Response_Time_Min",
+
+            # Location
             "AADT_Volume",
+            "KM_Marker",
+            "Latitude",
+            "Longitude",
+
+            # Time
             "Hour_24",
+            "Year",
+            "Month",
+            "Day",
+            "Day_of_Week",
+
+            # Vehicle
+            "Vehicle_Age_Years",
+
+            # Driver
+            "Age",
+            "Driving_Experience_Years",
+            "Monthly_Income_EGP",
+            "Prior_Violations_Count",
+            "Fatigue_Hours_Awake",
         ]
 
         for column in numeric_columns:
@@ -621,33 +1462,55 @@ class RiskModel:
 
                 continue
 
-            values = pd.to_numeric(
-                road_df[column],
-                errors="coerce",
-            ).dropna()
-
-            if values.empty:
-
-                continue
-
-            scenario[column] = round(
-                float(values.mean()),
-                2,
+            value = self._get_mean(
+                road_df[column]
             )
 
-        # -------------------------------------------------
-        # Categorical columns
-        # -------------------------------------------------
+            if value is not None:
+
+                scenario[column] = value
+
+        # =================================================
+        # CATEGORICAL FEATURES
+        # =================================================
 
         categorical_columns = [
+
+            # Accident / road
+            "Road_Type",
+            "Highway_Name",
+            "Governorate_EN",
+            "Collision_Type",
             "Weather_Condition",
             "Lighting_Condition",
             "Road_Surface_Condition",
-            "Collision_Type",
-            "Road_Type",
-            "Governorate_EN",
-            "Highway_Name",
+
+            # Location
+            "Is_Urban_Road",
+            "Is_Black_Spot",
+
+            # Vehicle
             "Vehicle_Category",
+            "Make",
+            "Model",
+            "Licensing_Status",
+            "Technical_Inspection_Passed",
+            "Overload_Flag",
+            "ABS_Equipped",
+            "Driver_Airbag_Equipped",
+            "Tire_Condition",
+            "Brake_Condition",
+            "Insurance_Coverage",
+            "Fuel_Type",
+
+            # Driver
+            "Gender",
+            "License_Category",
+            "License_Status",
+            "Occupation",
+            "Distracted_Driving_Mobile",
+            "Seatbelt_Used",
+            "Helmet_Used",
         ]
 
         for column in categorical_columns:
@@ -656,64 +1519,140 @@ class RiskModel:
 
                 continue
 
-            values = (
+            value = self._get_mode(
                 road_df[column]
-                .dropna()
-                .astype(str)
-                .str.strip()
             )
 
-            values = values[
-                values != ""
-            ]
+            if value is not None:
 
-            if values.empty:
+                scenario[column] = value
 
-                continue
+        # =================================================
+        # DERIVED SPEED FEATURES
+        # =================================================
 
-            mode_values = values.mode()
+        speed = scenario.get(
+            "Impact_Speed_KMH"
+        )
 
-            if not mode_values.empty:
+        speed_limit = scenario.get(
+            "Posted_Speed_Limit_KMH"
+        )
 
-                scenario[column] = str(
-                    mode_values.iloc[0]
+        if (
+            speed is not None
+            and
+            speed_limit is not None
+        ):
+
+            try:
+
+                speed = float(speed)
+                speed_limit = float(
+                    speed_limit
                 )
 
-        # -------------------------------------------------
-        # Safe defaults
-        # -------------------------------------------------
+                scenario[
+                    "Speed_Over_Limit_KMH"
+                ] = round(
+                    max(
+                        0.0,
+                        speed - speed_limit
+                    ),
+                    2
+                )
 
-        defaults = {
+                if speed_limit > 0:
 
-            "Weather_Condition": "Clear",
+                    scenario[
+                        "Speed_Ratio"
+                    ] = round(
+                        speed / speed_limit,
+                        4
+                    )
 
-            "Lighting_Condition": "Daylight",
+            except (
+                TypeError,
+                ValueError,
+            ):
 
-            "Road_Surface_Condition": "Dry",
+                pass
 
-            "Collision_Type": "Rear-end",
+        # =================================================
+        # COMPLETE SCENARIO FROM MODEL CONFIG
+        # =================================================
 
-            "Road_Type": "Urban",
+        # لو model config موجود، اطبع الـ features الناقصة
+        # بدل ما نخترع قيم.
+        if self.impact_features:
 
-            "Vehicles_Involved": 2,
+            missing = [
+                feature
+                for feature in self.impact_features
+                if feature not in scenario
+            ]
 
-            "Impact_Speed_KMH": 60,
+            if missing:
 
-            "Posted_Speed_Limit_KMH": 80,
+                print(
+                    "[WARNING] Missing AI impact features:"
+                )
 
-            "Emergency_Response_Time_Min": 15,
+                print(
+                    missing
+                )
 
-            "Hour_24": 12,
-        }
+            else:
 
-        for key, value in defaults.items():
+                print(
+                    "[INFO] AI impact scenario is COMPLETE."
+                )
 
-            if key not in scenario:
+        if self.classification_features:
 
-                scenario[key] = value
+            missing_classification = [
+                feature
+                for feature in self.classification_features
+                if feature not in scenario
+            ]
+
+            if missing_classification:
+
+                print(
+                    "[WARNING] Missing AI classification features:"
+                )
+
+                print(
+                    missing_classification
+                )
+
+            else:
+
+                print(
+                    "[INFO] AI classification scenario is COMPLETE."
+                )
+
+        # =================================================
+        # OPTIONAL SAFE FALLBACKS
+        # =================================================
+        #
+        # هذه ليست ML feature fabrication.
+        # تستخدم فقط للحفاظ على endpoints القديمة
+        # إذا كانت بعض الأعمدة العامة غير موجودة.
+        #
+        # لا نضع Defaults للـ driver/vehicle features.
+        # =================================================
+
+        if "Hour_24" not in scenario:
+
+            scenario["Hour_24"] = 12
+
+        # =================================================
+        # PRINT FINAL SCENARIO
+        # =================================================
 
         print(
-            f"[INFO] Built average scenario "
+            f"[INFO] Built complete average scenario "
             f"for '{road_name}':"
         )
 
@@ -785,9 +1724,18 @@ class RiskModel:
         # Hour factor
         # -------------------------------------------------
 
-        hour_key = str(
-            int(hour_24) % 24
-        )
+        try:
+
+            hour_key = str(
+                int(hour_24) % 24
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            hour_key = "12"
 
         hour_factor_data = (
             self.factors.get(
@@ -812,9 +1760,15 @@ class RiskModel:
             )
         )
 
+        weather_key = (
+            str(weather)
+            .strip()
+            .lower()
+        )
+
         weather_mult = (
             weather_factor_data.get(
-                str(weather).strip().lower(),
+                weather_key,
                 1.0,
             )
         )
@@ -989,18 +1943,27 @@ class RiskModel:
 
                 if key in components:
 
-                    components[key] = (
-                        float(
-                            components[key]
-                        )
-                        * (
-                            1
-                            - (
-                                pct
-                                * 0.5
+                    try:
+
+                        components[key] = (
+                            float(
+                                components[key]
+                            )
+                            * (
+                                1
+                                - (
+                                    pct
+                                    * 0.5
+                                )
                             )
                         )
-                    )
+
+                    except (
+                        TypeError,
+                        ValueError,
+                    ):
+
+                        pass
 
         # -------------------------------------------------
         # Normal factor
@@ -1011,44 +1974,62 @@ class RiskModel:
             and component_key in components
         ):
 
-            components[
-                component_key
-            ] = (
-                float(
-                    components[
-                        component_key
-                    ]
+            try:
+
+                components[
+                    component_key
+                ] = (
+                    float(
+                        components[
+                            component_key
+                        ]
+                    )
+                    * (
+                        1 - pct
+                    )
                 )
-                * (
-                    1 - pct
-                )
-            )
+
+            except (
+                TypeError,
+                ValueError,
+            ):
+
+                pass
 
         # -------------------------------------------------
         # Calculate new risk
         # -------------------------------------------------
 
         try:
+
             original_score = float(
                 road.get(
                     "risk_score",
                     0.0,
                 )
             )
+
         except (
             TypeError,
             ValueError,
         ):
+
             original_score = 0.0
 
-        # Apply improvement according to the selected factor weight
+        # -------------------------------------------------
+        # Apply improvement according to factor weight
+        # -------------------------------------------------
+
         if (
             component_key
             and component_key in COMPONENT_WEIGHTS
         ):
-            factor_weight = COMPONENT_WEIGHTS[
-                component_key
-            ]
+
+            factor_weight = (
+                COMPONENT_WEIGHTS[
+                    component_key
+                ]
+            )
 
             reduction = (
                 pct
@@ -1060,7 +2041,9 @@ class RiskModel:
                 original_score
                 - reduction
             )
+
         else:
+
             new_score = original_score
 
         new_score = max(
@@ -1080,7 +2063,9 @@ class RiskModel:
                 factor_label,
 
             "improvement_pct":
-                float(improvement_pct),
+                float(
+                    improvement_pct
+                ),
 
             "original_risk_score":
                 round(

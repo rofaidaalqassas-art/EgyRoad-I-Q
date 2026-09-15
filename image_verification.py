@@ -1,12 +1,11 @@
-
 # -*- coding: utf-8 -*-
 
 """
 image_verification.py
 =====================
 
-مرحلة فحص الصورة (Image Verification) لبلاغات المواطنين
-في مشروع EgyRoad IQ.
+مرحلة فحص الصورة (Image Verification)
+لبلاغات المواطنين في مشروع EgyRoad IQ.
 
 الوظيفة:
 - فحص الصورة باستخدام Gemini Vision.
@@ -22,8 +21,11 @@ image_verification.py
 - في حالة فشل Gemini أو عدم وضوح النتيجة:
     needs_review
 
-المتطلبات:
-    pip install google-genai
+نسخة محسنة للسرعة:
+- استدعاء Gemini مرة واحدة فقط.
+- بدون Retry.
+- بدون Double Check.
+- JSON فقط.
 """
 
 from __future__ import annotations
@@ -31,10 +33,11 @@ from __future__ import annotations
 import json
 import os
 import re
-import time
-
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
+
+from google import genai
+from google.genai import types
 
 
 # =========================================================
@@ -60,30 +63,25 @@ _ALLOWED_STATUSES = {
 
 
 # =========================================================
-# VERIFICATION SETTINGS
+# CONFIDENCE SETTINGS
 # =========================================================
 
-MAX_RETRIES = int(
-    os.environ.get(
-        "IMAGE_VERIFY_MAX_RETRIES",
-        "2",
-    )
-)
-
-RETRY_DELAY_SECONDS = float(
-    os.environ.get(
-        "IMAGE_VERIFY_RETRY_DELAY",
-        "1.5",
-    )
-)
-
-
-# أقل ثقة تجعلنا نحتاج مراجعة بشرية
+# أقل ثقة تجعلنا نحول النتيجة إلى needs_review
 MIN_CONFIDENCE_NEEDS_REVIEW = 0.40
 
 
-# أقل ثقة لقبول evidence/hazard مباشرة
-MIN_CONFIDENCE_CONFIRMED = 0.65
+# =========================================================
+# GEMINI CLIENT
+# =========================================================
+
+# إنشاء Client مرة واحدة بدل إنشائه مع كل صورة.
+try:
+    client = genai.Client()
+except Exception as e:
+    client = None
+    print(
+        f"[WARN] Image verification client initialization failed: {e}"
+    )
 
 
 # =========================================================
@@ -95,6 +93,7 @@ _VERIFICATION_PROMPT = """
 عن حوادث ومخاطر الطرق في مصر.
 
 مهمتك الوحيدة:
+
 افحص الصورة المرفقة فقط، بدون الاعتماد على أي معلومات
 خارج الصورة، وحدد تصنيف الصورة.
 
@@ -141,12 +140,12 @@ _VERIFICATION_PROMPT = """
 - لا تستطيع تحديد التصنيف بثقة كافية
 
 قواعد صارمة:
-
 - إذا كنت غير متأكد، استخدم needs_review.
 - لا تستخدم كلمة false إطلاقًا.
 - لا تحكم بأن البلاغ كاذب.
 - أنت تفحص الصورة فقط.
-- يجب أن تكون الإجابة JSON فقط بدون أي كلام إضافي.
+- يجب أن تكون الإجابة JSON فقط.
+- لا تكتب أي شرح خارج JSON.
 
 الشكل المطلوب:
 
@@ -157,13 +156,13 @@ _VERIFICATION_PROMPT = """
 }
 
 يجب أن يكون status واحدًا فقط من:
-
 evidence_detected
 hazard_detected
 irrelevant
 needs_review
 
 confidence يجب أن يكون رقمًا عشريًا بين 0 و 1.
+
 reason يجب أن تكون جملة قصيرة باللغة العربية.
 """
 
@@ -174,22 +173,16 @@ reason يجب أن تكون جملة قصيرة باللغة العربية.
 
 @dataclass
 class ImageVerificationResult:
-
     status: str
-
     confidence: float
-
     reason: str
-
     raw_model_output: Optional[str] = field(
         default=None,
         repr=False,
     )
-
     error: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
-
         return {
             "status": self.status,
             "confidence": round(
@@ -212,15 +205,10 @@ def _needs_review(
 ) -> ImageVerificationResult:
 
     return ImageVerificationResult(
-
         status="needs_review",
-
         confidence=0.0,
-
         reason=reason,
-
         raw_model_output=raw,
-
         error=error,
     )
 
@@ -232,7 +220,6 @@ def _needs_review(
 def _extract_json_block(
     text: str,
 ) -> Optional[Dict[str, Any]]:
-
     """
     يحاول استخراج JSON من رد Gemini.
 
@@ -243,15 +230,12 @@ def _extract_json_block(
     """
 
     if not text:
-
         return None
-
 
     text = text.strip()
 
-
     # -----------------------------------------------------
-    # إزالة Markdown code fence
+    # 1. إزالة Markdown code fence
     # -----------------------------------------------------
 
     fenced_match = re.search(
@@ -261,65 +245,44 @@ def _extract_json_block(
     )
 
     if fenced_match:
-
         text = fenced_match.group(1).strip()
 
-
     # -----------------------------------------------------
-    # محاولة JSON مباشر
+    # 2. JSON مباشر
     # -----------------------------------------------------
 
     try:
-
         parsed = json.loads(text)
 
         if isinstance(parsed, dict):
-
             return parsed
 
     except json.JSONDecodeError:
-
         pass
 
-
     # -----------------------------------------------------
-    # البحث عن أول JSON object
+    # 3. البحث عن JSON object داخل النص
     # -----------------------------------------------------
 
     start = text.find("{")
-
     end = text.rfind("}")
 
-
     if start == -1 or end == -1:
-
         return None
-
 
     if end <= start:
-
         return None
 
-
-    json_text = text[
-        start:end + 1
-    ]
-
+    json_text = text[start:end + 1]
 
     try:
-
-        parsed = json.loads(
-            json_text
-        )
+        parsed = json.loads(json_text)
 
         if isinstance(parsed, dict):
-
             return parsed
 
     except json.JSONDecodeError:
-
         return None
-
 
     return None
 
@@ -332,47 +295,31 @@ def _call_vision_model_once(
     image_bytes: bytes,
     mime_type: str,
 ) -> str:
-
     """
-    استدعاء واحد فعلي لـ Gemini Vision.
+    استدعاء واحد فقط لـ Gemini Vision.
+
+    لا يوجد Retry هنا لأن السرعة مهمة في مسار البلاغ.
     """
 
-    from google import genai
-    from google.genai import types
-
-
-    client = genai.Client()
-
+    if client is None:
+        raise RuntimeError(
+            "Gemini client is not initialized."
+        )
 
     response = client.models.generate_content(
-
         model=VISION_MODEL_NAME,
-
         contents=[
-
             _VERIFICATION_PROMPT,
-
             types.Part.from_bytes(
-
                 data=image_bytes,
-
                 mime_type=mime_type,
             ),
-
         ],
-
         config=types.GenerateContentConfig(
-
             temperature=0,
-
-            # كان 256 قبل كده - قليل جدًا لموديل بيرجّع تفكير/تمهيد قبل
-            # الـ JSON النهائي، فكان بيقطع الرد ناقص قبل ما يكمل الـ JSON
-            # (وده بالظبط سبب "رد موديل فحص الصور لم يكن بصيغة JSON صالحة"
-            # اللي بيظهر مع كل صورة تقريبًا - رد موجود لكن مقطوع).
-            max_output_tokens=1024,
+            max_output_tokens=256,
         ),
     )
-
 
     text = getattr(
         response,
@@ -380,102 +327,10 @@ def _call_vision_model_once(
         None,
     )
 
-
     if text is None:
-
         return ""
 
-
     return str(text).strip()
-
-
-# =========================================================
-# GEMINI WITH RETRY
-# =========================================================
-
-def _call_vision_model_with_retry(
-    image_bytes: bytes,
-    mime_type: str,
-):
-
-    """
-    استدعاء Gemini مع Retry.
-
-    يرجع:
-
-        (raw_text, error)
-
-    """
-
-    last_error = None
-
-
-    total_attempts = (
-        MAX_RETRIES + 1
-    )
-
-
-    for attempt in range(
-        1,
-        total_attempts + 1,
-    ):
-
-        try:
-
-            raw_text = (
-                _call_vision_model_once(
-                    image_bytes,
-                    mime_type,
-                )
-            )
-
-
-            if raw_text:
-
-                return (
-                    raw_text,
-                    None,
-                )
-
-
-            last_error = (
-                "رد فارغ من موديل Gemini"
-            )
-
-
-        except Exception as e:
-
-            last_error = str(e)
-
-
-        # -------------------------------------------------
-        # Retry
-        # -------------------------------------------------
-
-        if attempt < total_attempts:
-
-            delay = (
-                RETRY_DELAY_SECONDS
-                * attempt
-            )
-
-            time.sleep(
-                delay
-            )
-
-
-    # نطبع سبب الفشل النهائي فى الـ logs (Render → Logs) عشان نعرف بالظبط
-    # ليه كل المحاولات فشلت - استثناء API؟ مفتاح غير صحيح؟ Timeout؟ - بدل
-    # ما نعرف بس إنها فشلت من غير أي تفاصيل.
-    print(
-        f"[WARN] image verification: all {total_attempts} attempts failed. "
-        f"last_error={last_error!r}"
-    )
-
-    return (
-        None,
-        last_error,
-    )
 
 
 # =========================================================
@@ -485,27 +340,19 @@ def _call_vision_model_with_retry(
 def _parse_verification_response(
     raw_text: str,
 ):
-
     """
     يحول رد Gemini إلى:
-
         status
         confidence
         reason
     """
 
-    parsed = _extract_json_block(
-        raw_text
-    )
-
+    parsed = _extract_json_block(raw_text)
 
     if not parsed:
-
-        # نطبع رد Gemini الخام فى الـ logs (يظهر فى Render → Logs) عشان
-        # لو الرد لسه بيفشل بعد رفع max_output_tokens، نقدر نشوف بالظبط
-        # الموديل رجّع إيه بدل ما نخمّن السبب.
         print(
-            "[WARN] image verification: invalid JSON from Gemini. "
+            "[WARN] image verification: "
+            "invalid JSON from Gemini. "
             f"raw_text={raw_text!r}"
         )
 
@@ -515,6 +362,9 @@ def _parse_verification_response(
             "رد موديل فحص الصور لم يكن بصيغة JSON صالحة",
         )
 
+    # -----------------------------------------------------
+    # STATUS
+    # -----------------------------------------------------
 
     status = str(
         parsed.get(
@@ -523,6 +373,9 @@ def _parse_verification_response(
         )
     ).strip()
 
+    # -----------------------------------------------------
+    # REASON
+    # -----------------------------------------------------
 
     reason = str(
         parsed.get(
@@ -531,30 +384,25 @@ def _parse_verification_response(
         )
     ).strip()
 
-
     if not reason:
+        reason = "بدون توضيح من الموديل"
 
-        reason = (
-            "بدون توضيح من الموديل"
-        )
-
+    # -----------------------------------------------------
+    # CONFIDENCE
+    # -----------------------------------------------------
 
     try:
-
         confidence = float(
             parsed.get(
                 "confidence",
                 0,
             )
         )
-
     except (
         TypeError,
         ValueError,
     ):
-
         confidence = 0.0
-
 
     confidence = max(
         0.0,
@@ -564,9 +412,11 @@ def _parse_verification_response(
         ),
     )
 
+    # -----------------------------------------------------
+    # STATUS VALIDATION
+    # -----------------------------------------------------
 
     if status not in _ALLOWED_STATUSES:
-
         return (
             None,
             confidence,
@@ -575,7 +425,6 @@ def _parse_verification_response(
                 f"غير معروف: {status!r}"
             ),
         )
-
 
     return (
         status,
@@ -592,74 +441,79 @@ def verify_incident_image(
     image_bytes: bytes,
     mime_type: str = "image/jpeg",
 ) -> ImageVerificationResult:
-
     """
     فحص صورة بلاغ واحدة باستخدام Gemini Vision.
 
     النتيجة الممكنة:
-
         evidence_detected
         hazard_detected
         irrelevant
         needs_review
 
     لا يوجد false هنا إطلاقًا.
-    """
 
+    يستخدم استدعاء Gemini واحد فقط.
+    """
 
     # -----------------------------------------------------
     # 1. التأكد من وجود صورة
     # -----------------------------------------------------
 
     if not image_bytes:
-
         return _needs_review(
             "لم يتم استلام أي بيانات صورة صالحة للفحص"
         )
 
+    # -----------------------------------------------------
+    # 2. التأكد من Gemini Client
+    # -----------------------------------------------------
+
+    if client is None:
+        return _needs_review(
+            "تعذر تهيئة خدمة فحص الصور بالذكاء الاصطناعي"
+        )
 
     # -----------------------------------------------------
-    # 2. التأكد من Google GenAI
+    # 3. فحص الصورة
     # -----------------------------------------------------
 
     try:
-
-        from google import genai  # noqa: F401
-
-    except ImportError:
-
-        return _needs_review(
-
-            "مكتبة google-genai غير مثبتة. "
-            "شغّلي: pip install google-genai"
+        print(
+            "[IMAGE AI] Starting image verification..."
         )
 
-
-    # -----------------------------------------------------
-    # 3. الاتصال بـ Gemini
-    # -----------------------------------------------------
-
-    raw_text, error = (
-        _call_vision_model_with_retry(
+        raw_text = _call_vision_model_once(
             image_bytes,
             mime_type,
         )
-    )
 
-
-    if raw_text is None:
-
-        return _needs_review(
-
-            "تعذر الاتصال بموديل فحص الصور "
-            "بعد عدة محاولات، يحتاج البلاغ مراجعة يدويًا",
-
-            error=error,
+        print(
+            "[IMAGE AI] Gemini response received."
         )
 
+    except Exception as e:
+        print(
+            "[WARN] image verification failed: "
+            f"{type(e).__name__}: {e}"
+        )
+
+        return _needs_review(
+            "تعذر فحص الصورة آليًا حاليًا، "
+            "ويحتاج البلاغ مراجعة.",
+            error=str(e),
+        )
 
     # -----------------------------------------------------
-    # 4. تحليل JSON
+    # 4. رد فارغ
+    # -----------------------------------------------------
+
+    if not raw_text:
+        return _needs_review(
+            "لم يرجع موديل فحص الصور نتيجة."
+        )
+
+    # -----------------------------------------------------
+    # 5. تحليل JSON
     # -----------------------------------------------------
 
     (
@@ -670,239 +524,50 @@ def verify_incident_image(
         raw_text
     )
 
-
     if status is None:
-
         return _needs_review(
-
             reason,
-
             raw=raw_text,
         )
 
-
     # -----------------------------------------------------
-    # 5. ثقة منخفضة
+    # 6. LOW CONFIDENCE
     # -----------------------------------------------------
 
     if (
-
-        confidence
-        < MIN_CONFIDENCE_NEEDS_REVIEW
-
-        and status
-        != "needs_review"
-
+        confidence < MIN_CONFIDENCE_NEEDS_REVIEW
+        and status != "needs_review"
     ):
-
         return ImageVerificationResult(
-
             status="needs_review",
-
             confidence=confidence,
-
             reason=(
-
                 "ثقة الموديل منخفضة "
                 f"({confidence:.2f}) "
                 f"على تصنيف '{status}'، "
                 "ويحتاج البلاغ مراجعة بشرية"
-
             ),
-
             raw_model_output=raw_text,
         )
-
-
-    # -----------------------------------------------------
-    # 6. DOUBLE CHECK
-    # -----------------------------------------------------
-
-    if (
-
-        status
-        in (
-            "evidence_detected",
-            "hazard_detected",
-        )
-
-        and confidence
-        < MIN_CONFIDENCE_CONFIRMED
-
-    ):
-
-        (
-            second_raw,
-            second_error,
-        ) = (
-            _call_vision_model_with_retry(
-                image_bytes,
-                mime_type,
-            )
-        )
-
-
-        # -------------------------------------------------
-        # فشل الفحص الثاني
-        # -------------------------------------------------
-
-        if second_raw is None:
-
-            return ImageVerificationResult(
-
-                status="needs_review",
-
-                confidence=confidence,
-
-                reason=(
-
-                    f"التصنيف الأولي '{status}' "
-                    f"بثقة {confidence:.2f}، "
-                    "لكن فحص التأكيد الثاني فشل، "
-                    "لذلك يحتاج البلاغ مراجعة بشرية"
-
-                ),
-
-                raw_model_output=raw_text,
-
-                error=second_error,
-            )
-
-
-        # -------------------------------------------------
-        # تحليل الفحص الثاني
-        # -------------------------------------------------
-
-        (
-            second_status,
-            second_confidence,
-            second_reason,
-        ) = _parse_verification_response(
-            second_raw
-        )
-
-
-        # -------------------------------------------------
-        # الفحص الثاني غير صالح
-        # -------------------------------------------------
-
-        if second_status is None:
-
-            return ImageVerificationResult(
-
-                status="needs_review",
-
-                confidence=min(
-                    confidence,
-                    second_confidence,
-                ),
-
-                reason=(
-
-                    "تعذر تأكيد التصنيف "
-                    "في الفحص الثاني"
-
-                ),
-
-                raw_model_output=(
-
-                    f"{raw_text}\n"
-                    "---second_pass---\n"
-                    f"{second_raw}"
-
-                ),
-            )
-
-
-        # -------------------------------------------------
-        # هل الفحصان متفقان؟
-        # -------------------------------------------------
-
-        agrees = (
-
-            second_status == status
-
-            and
-
-            second_confidence
-            >= MIN_CONFIDENCE_NEEDS_REVIEW
-
-        )
-
-
-        if not agrees:
-
-            return ImageVerificationResult(
-
-                status="needs_review",
-
-                confidence=min(
-
-                    confidence,
-
-                    second_confidence,
-
-                ),
-
-                reason=(
-
-                    f"الفحص الأول رجّع "
-                    f"'{status}' "
-                    f"({confidence:.2f})، "
-
-                    f"والفحص الثاني رجّع "
-                    f"'{second_status}' "
-                    f"({second_confidence:.2f})، "
-
-                    "لذلك النتيجة تحتاج مراجعة بشرية"
-
-                ),
-
-                raw_model_output=(
-
-                    f"{raw_text}\n"
-                    "---second_pass---\n"
-                    f"{second_raw}"
-
-                ),
-            )
-
-
-        # -------------------------------------------------
-        # الفحصان متفقان
-        # -------------------------------------------------
-
-        confidence = (
-            second_confidence
-        )
-
-        reason = (
-            second_reason
-        )
-
-        raw_text = (
-
-            f"{raw_text}\n"
-            "---second_pass_confirmed---\n"
-            f"{second_raw}"
-
-        )
-
 
     # -----------------------------------------------------
     # 7. النتيجة النهائية
     # -----------------------------------------------------
 
-    return ImageVerificationResult(
-
+    result = ImageVerificationResult(
         status=status,
-
         confidence=confidence,
-
         reason=reason,
-
         raw_model_output=raw_text,
     )
+
+    print(
+        "[IMAGE AI] "
+        f"status={status} "
+        f"confidence={confidence:.2f}"
+    )
+
+    return result
 
 
 # =========================================================
@@ -912,7 +577,6 @@ def verify_incident_image(
 def image_report_flag(
     result: ImageVerificationResult,
 ) -> Dict[str, Any]:
-
     """
     تحويل نتيجة فحص الصورة إلى Flag
     يمكن تخزينه مع البلاغ.
@@ -921,7 +585,6 @@ def image_report_flag(
     """
 
     label_map = {
-
         "evidence_detected":
             "Evidence detected",
 
@@ -935,9 +598,7 @@ def image_report_flag(
             "Needs Review",
     }
 
-
     return {
-
         "image_status":
             result.status,
 
