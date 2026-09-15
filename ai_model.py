@@ -425,6 +425,10 @@ class AIModel:
             scenario
         )
 
+        # راجعي predict_impact لنفس الفكرة - بنطبع السيناريو والنتيجة
+        # الخام عشان نتأكد إن كل سيناريو مختلف بيدي رقم مختلف فعليًا.
+        print(f"[DEBUG] predict (classifier) scenario={scenario} prob={prob}")
+
         result = {
             "injury_probability": round(
                 prob,
@@ -499,6 +503,15 @@ class AIModel:
 
         except Exception:
             fatalities_raw = 0.0
+
+        # نطبع السيناريو الفعلي اللي اتبعت للموديل + النتائج الخام (قبل
+        # التقريب) فى الـ logs (Render → Logs) - عشان نتأكد إن كل طلب
+        # بيوصل بسيناريو مختلف فعليًا للموديل، وإن الرقم اللي بيطلع مش
+        # متجمد على نفس القيمة بالصدفة.
+        print(
+            f"[DEBUG] predict_impact scenario={scenario} "
+            f"injuries_raw={injuries_raw} fatalities_raw={fatalities_raw}"
+        )
 
         # -------------------------------
         # Clean predictions
