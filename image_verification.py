@@ -365,7 +365,11 @@ def _call_vision_model_once(
 
             temperature=0,
 
-            max_output_tokens=256,
+            # كان 256 قبل كده - قليل جدًا لموديل بيرجّع تفكير/تمهيد قبل
+            # الـ JSON النهائي، فكان بيقطع الرد ناقص قبل ما يكمل الـ JSON
+            # (وده بالظبط سبب "رد موديل فحص الصور لم يكن بصيغة JSON صالحة"
+            # اللي بيظهر مع كل صورة تقريبًا - رد موجود لكن مقطوع).
+            max_output_tokens=1024,
         ),
     )
 
@@ -488,6 +492,14 @@ def _parse_verification_response(
 
 
     if not parsed:
+
+        # نطبع رد Gemini الخام فى الـ logs (يظهر فى Render → Logs) عشان
+        # لو الرد لسه بيفشل بعد رفع max_output_tokens، نقدر نشوف بالظبط
+        # الموديل رجّع إيه بدل ما نخمّن السبب.
+        print(
+            "[WARN] image verification: invalid JSON from Gemini. "
+            f"raw_text={raw_text!r}"
+        )
 
         return (
             None,
