@@ -321,12 +321,27 @@ class RiskModel:
             )
 
             # -------------------------------------------------
-            # قراءة البيانات
+            # قراءة البيانات - أعمدة build_average_scenario بس (زائد كل
+            # أسماء عمود الطريق المحتملة اللي _find_road_column بيدوّر
+            # عليها) بدل الشيت كامل - نفس الأسلوب المستخدم فى باقي الملف
+            # (_load_journey_df/get_excel_data) لتقليل وقت التشغيل.
             # -------------------------------------------------
+
+            _NEEDED_COLS = {
+                "Vehicles_Involved", "Impact_Speed_KMH",
+                "Posted_Speed_Limit_KMH", "Emergency_Response_Time_Min",
+                "AADT_Volume", "Hour_24",
+                "Weather_Condition", "Lighting_Condition",
+                "Road_Surface_Condition", "Collision_Type", "Road_Type",
+                "Governorate_EN", "Vehicle_Category",
+                "Highway_Name", "Road_Name", "Road", "RoadName",
+                "Highway", "Street_Name", "Road_Name_EN",
+            }
 
             df = pd.read_excel(
                 excel_file,
                 sheet_name=selected_sheet,
+                usecols=lambda c: c in _NEEDED_COLS,
             )
 
             # -------------------------------------------------
