@@ -915,12 +915,22 @@ _EXCEL_DATA_CACHE = None  # نتيجة get_excel_data() مكاشة - راجع ا
 
 
 def get_excel_data():
-    """Load the accident records and enrich them with location attributes.
+    """Return only the columns the frontend actually reads from /api/data.
 
     مكاش فى الذاكرة (زي _load_journey_df بالظبط) بدل ما يعيد قراءة/دمج
     ملف accidents_data.xlsx (~40 ألف صف) وتحويله لـ JSON فى كل طلب. القراءة
     والتحويل دول كانوا بيتكرروا مع كل GET /api/data، وده اللي كان بيسبب
-    تخطي حد الذاكرة (Memory limit) على Render وإعادة تشغيل الخدمة."""
+    تخطي حد الذاكرة (Memory limit) على Render وإعادة تشغيل الخدمة.
+
+    كانت الدالة بترجع الجدول كامل (Accidents مدموج مع كل أعمدة Locations،
+    حوالي 27 عمود × 40 ألف صف). فحصت EgyRoad_IQ.html ولقيت إن d.data من
+    /api/data مستخدم فى مكان واحد بس (loadExcelData/loadStats) وبس كـ
+    احتياطي لو /dashboard-stats (السريع، المبني من artifacts/) فشل، وإن
+    الوحيد اللي بيتقرا فعليًا من كل صف هو Fatalities_Count وInjuries_Count
+    (زائد d.data.length نفسه). فبنرجع العمودين دول بس بدل الجدول كله - ده
+    بيقلل حجم الاستجابة بشكل كبير جدًا (من ~27 عمود لعمودين) وبيلغي الحاجة
+    لقراءة/دمج شيت Locations خالص، وده اللي كان بيسبب التأخير/الـ502 حتى
+    بعد إصلاح الـ caching والـ NaN."""
 
     global _EXCEL_DATA_CACHE
     if _EXCEL_DATA_CACHE is not None:
@@ -933,63 +943,22 @@ def get_excel_data():
             "accidents_data.xlsx"
         )
 
-        xls = pd.ExcelFile(excel_path)
-
         accidents = pd.read_excel(
-            xls,
-            "Accidents"
+            excel_path,
+            sheet_name="Accidents",
+            usecols=lambda c: c in ("Fatalities_Count", "Injuries_Count")
         )
 
-        locations = pd.read_excel(
-            xls,
-            "Locations"
-        )
+        for col in ("Fatalities_Count", "Injuries_Count"):
+            if col not in accidents.columns:
+                accidents[col] = 0
+            accidents[col] = pd.to_numeric(accidents[col], errors="coerce").fillna(0)
 
-        location_cols = [
-            "Location_ID",
-            "AADT_Volume",
-            "Is_Black_Spot",
-            "Black_Spot_Name",
-            "KM_Marker",
-            "Latitude",
-            "Longitude",
-            "Is_Urban_Road"
-        ]
-
-        location_cols = [
-            c for c in location_cols
-            if c in locations.columns
-        ]
-
-        df = accidents.merge(
-            locations[location_cols],
-            on="Location_ID",
-            how="left",
-            suffixes=("", "_location")
-        )
-
-        for col in df.columns:
-            if pd.api.types.is_datetime64_any_dtype(df[col]):
-                df[col] = df[col].astype(str)
-
-        records = df.to_dict(
-            orient="records"
-        )
-
-        # تحويل القيم الفاضية (NaN/NaT) إلى None بعد التحويل لـ dict مباشرة،
-        # بفحص كل قيمة لوحدها بـ pd.isna() - أضمن من df.where(pd.notna(df),
-        # None) اللي كان بيسيب بعض قيم NaN من غير استبدال فى بعض الأعمدة
-        # (زي Black_Spot_Name القادم من عمود location الفاضي للصفوف اللي
-        # معندهاش موقع مطابق فى الـ merge)، وده كان يسبب:
-        #   ValueError: Out of range float values are not JSON compliant: nan
-        records = [
-            {k: (None if pd.isna(v) else v) for k, v in row.items()}
-            for row in records
-        ]
+        records = accidents.to_dict(orient="records")
 
         _EXCEL_DATA_CACHE = {
             "count": len(records),
-            "columns": df.columns.tolist(),
+            "columns": accidents.columns.tolist(),
             "data": records
         }
         return _EXCEL_DATA_CACHE
