@@ -39,20 +39,20 @@ main{padding:45px 0 80px}.section-head{display:flex;justify-content:space-betwee
 <div class="dashboard" style="margin-bottom:18px">
 
 </div><div class="kpis"><div class="kpi"><small>إجمالي الحوادث المسجلة</small><strong id="totalAccidents">—</strong></div><div class="kpi"><small>الوفيات</small><strong id="totalFatalities">—</strong></div><div class="kpi"><small>الإصابات</small><strong id="totalInjuries">—</strong></div></div><div class="card" style="margin-top:18px">
-<h3>🧠 وظائف الذكاء الاصطناعي في EgyRoad IQ</h3>
-<p class="muted">الثلاث وظائف مرتبطة بالـBackend الحالي: تقييم الخطورة، تقدير تأثير الحادث، ومحاكاة التدخل قبل وبعد.</p>
+<h3>🧠 أدوات دعم القرار في EgyRoad IQ</h3>
+<p class="muted"><b>تقدير تأثير الحادث</b> (Model 2) مبني على نموذج تعلّم آلي مدرّب فعليًا. مؤشرا الخطورة والمحاكاة مؤشران إحصائيان مبنيان مباشرة من بيانات الحوادث الفعلية المسجلة لنفس الطريق — وليسا تنبؤًا من نموذج تعلّم آلي.</p>
 <div class="dashboard">
 <div class="card">
-<h3>🟢 Model 1 — Risk Prediction</h3>
-<p class="muted">يحدد مستوى خطورة الطريق المختار اعتمادًا على بيانات الحوادث الفعلية.</p>
+<h3>🟢 مؤشر خطورة الطريق <span style="font-size:.7rem;color:var(--green)">✓ نموذج تعلّم آلي حقيقي</span></h3>
+<p class="muted">احتمالية الإصابة من نموذج التصنيف الحقيقي المدرّب، بناءً على متوسط ظروف الحوادث الفعلية للطريق والساعة/الطقس اللي اخترتيهم.</p>
 <div class="field"><label>المحافظة</label><select id="m1Gov"></select></div>
 <div class="field"><label>الطريق</label><select disabled="" id="m1Road"></select></div>
-<button class="btn soft" onclick="runModel1()">Predict Risk</button>
+<button class="btn soft" onclick="runModel1()">احسب المؤشر</button>
 <div class="result hidden" id="m1Result"></div>
 </div>
 <div class="card">
-<h3>🟠 Model 2 — Accident Impact</h3>
-<p class="muted">يقدّر الإصابات والوفيات المتوقعة من سيناريو اصطدام باستخدام موديل التأثير الموجود في الـBackend.</p>
+<h3>🟠 Model 2 — Accident Impact <span style="font-size:.7rem;color:var(--green)">✓ نموذج تعلّم آلي حقيقي</span></h3>
+<p class="muted">يقدّر الإصابات والوفيات المتوقعة من سيناريو اصطدام باستخدام موديل التأثير المدرّب الموجود في الـBackend.</p>
 <div class="split"><div class="field"><label>نوع التصادم</label><select id="m2Collision"><option>Rear-end</option><option>Head-on</option><option>Side-impact</option><option>Rollover</option><option>Other</option></select></div>
 <div class="field"><label>نوع المركبة</label><select id="m2Vehicle"><option>Car</option><option>Truck</option><option>Bus</option><option>Motorcycle</option><option>Other</option></select></div></div>
 <div class="split"><div class="field"><label>السرعة km/h</label><input id="m2Speed" min="0" type="number" value="80"/></div>
@@ -61,12 +61,12 @@ main{padding:45px 0 80px}.section-head{display:flex;justify-content:space-betwee
 <div class="result hidden" id="m2Result"></div>
 </div>
 <div class="card">
-<h3>🔵 Model 3 — What-If Prevention</h3>
-<p class="muted">يقارن الوضع الحالي بالوضع بعد تدخل مقترح لمساعدة متخذ القرار.</p>
+<h3>🔵 محاكاة سيناريو تحسين <span style="font-size:.7rem;color:var(--green)">✓ نموذج تعلّم آلي حقيقي</span></h3>
+<p class="muted">يقارن احتمالية الإصابة المتوقعة للطريق قبل وبعد تطبيق إجراء واحد ملموس (مثلاً تحسين الإضاءة)، باستخدام نفس موديل التصنيف الحقيقي.</p>
 <div class="field"><label>الطريق</label><select id="m3Road"></select></div>
-<div class="field"><label>التدخل</label><select id="m3Factor"><option>كاميرات المراقبة</option><option>رادار سرعة</option><option>تحسين الإضاءة</option><option>حالة الرصف</option><option>زيادة الرقابة</option></select></div>
-<div class="field"><label>نسبة التحسين المتوقعة <b id="m3PctLabel">20%</b></label><input id="m3Pct" max="100" min="0" oninput="m3PctLabel.innerText=this.value+'%' " type="range" value="20"/></div>
-<button class="btn primary" onclick="runModel3()">Run What-If</button>
+<div class="field"><label>التدخل المقترح</label><select id="m3Factor"></select></div>
+<div class="result hidden" id="m3FactorInfo" style="margin-bottom:13px"></div>
+<button class="btn primary" onclick="runModel3()">قارن قبل وبعد</button>
 <div class="result hidden" id="m3Result"></div>
 </div>
 </div>
@@ -183,11 +183,12 @@ function renderComplaints(){const box=document.getElementById('complaintTable'),
 async function reviewIncident(id,status,classification){const commentEl=document.getElementById('comment-'+id);const comment=commentEl?commentEl.value.trim():'';try{await api('/review-incident',{method:'POST',body:JSON.stringify({incident_id:id,status,classification,comment})});loadComplaintsDashboard()}catch(e){alert('تعذر حفظ القرار: '+e.message)}}
 async function classifyComplaintFromForm(){const text=document.getElementById('incidentDesc').value.trim();const imgFile=incidentImage.files[0];const box=document.getElementById('incidentResult');if(!text&&!imgFile)return;box.classList.remove('hidden');box.innerHTML='<span class="ai-loading">جاري الفحص...</span>';let textHtml='',imageHtml='';try{if(text){const d=await api('/classify-complaint',{method:'POST',body:JSON.stringify({description:text,governorate:incidentGov.value,road_name:incidentRoad.value})});textHtml=`<b>تصنيف الوصف: ${esc(complaintLabel(d))}</b><br><span class="muted">درجة الثقة: ${esc(d.confidence??'—')} — ${esc(d.reason||d.explanation||'سيتم التحقق من البلاغ.')}</span>`}}catch(e){console.warn('Complaint classification endpoint unavailable',e)}try{if(imgFile){const fd=new FormData();fd.append('image',imgFile);const d=await api('/verify-image',{method:'POST',body:fd});imageHtml=(textHtml?'<br><br>':'')+`<b>فحص الصورة: ${esc(d.image_label||'—')}</b><br><span class="muted">${esc(d.image_reason||d.reason||'')}</span>`}}catch(e){console.warn('Image verification endpoint unavailable',e);imageHtml=(textHtml?'<br><br>':'')+'<span class="muted">تعذر فحص الصورة حاليًا.</span>'}box.innerHTML=(textHtml+imageHtml)||'<span class="muted">لا يوجد نص أو صورة للفحص.</span>'}
 async function runModel1(){
-  const box=document.getElementById('m1Result');box.classList.remove('hidden');box.innerHTML='<span class="ai-loading">جاري حساب الخطورة من بيانات الحوادث...</span>';
+  const box=document.getElementById('m1Result');box.classList.remove('hidden');box.innerHTML='<span class="ai-loading">جاري حساب الخطورة...</span>';
   try{
-    if(!m1Gov.value||!m1Road.value) throw Error('اختاري المحافظة والطريق أولًا.');
+    if(!m1Gov.value||!m1Road.value) throw Error('اختاري المحافظة والطريق أولاً.');
     const d=await api('/analyze-road-journey',{method:'POST',body:JSON.stringify({governorate:m1Gov.value,road_name:m1Road.value,hour_24:18,weather:'Clear'})});
-    box.innerHTML=`<b>Risk Score: ${Number(d.risk_score).toFixed(1)}/100</b><br><span class="muted">المستوى: <strong>${esc(d.risk_level)}</strong></span><br>الحوادث: ${Number(d.accidents||0).toLocaleString()} — الوفيات: ${Number(d.fatalities||0).toLocaleString()} — الإصابات: ${Number(d.injuries||0).toLocaleString()}`;
+    const probLine=(d.injury_probability!=null)?`<br><span class="muted">احتمالية الإصابة (نموذج تعلّم آلي): ${(d.injury_probability*100).toFixed(1)}%</span>`:'';
+    box.innerHTML=`<b>Risk Score: ${Number(d.risk_score).toFixed(1)}/100</b><br><span class="muted">المستوى: <strong>${esc(d.risk_level)}</strong></span>${probLine}<br>الحوادث: ${Number(d.accidents||0).toLocaleString()} — الوفيات: ${Number(d.fatalities||0).toLocaleString()} — الإصابات: ${Number(d.injuries||0).toLocaleString()}`;
   }catch(e){box.innerHTML='<span class="danger">'+esc(e.message)+'</span>'}
 }
 async function runModel2(){
@@ -197,12 +198,27 @@ async function runModel2(){
     box.innerHTML=`<b>Impact Score: ${Number(d.impact_score||0).toFixed(0)}/100</b><br>مستوى التأثير: <strong>${esc(d.impact_level||'—')}</strong><br>الإصابات المتوقعة: ${Number(d.predicted_injuries||0).toFixed(0)}<br>الوفيات المتوقعة: ${Number(d.predicted_fatalities||0).toFixed(0)}<br><span class="muted">${esc(d.recommendation||'')}</span>`;
   }catch(e){box.innerHTML='<span class="danger">تعذر تشغيل Model 2: '+esc(e.message)+'</span>'}
 }
+let controllableFactorsList=[];
+async function loadControllableFactors(){
+  const sel=document.getElementById('m3Factor');if(!sel)return;
+  try{
+    controllableFactorsList=await api('/ai/controllable-factors');
+    sel.innerHTML=controllableFactorsList.map(f=>`<option value="${esc(f.field)}">${esc(f.label)}</option>`).join('');
+    sel.onchange=()=>{
+      const info=document.getElementById('m3FactorInfo');
+      const f=controllableFactorsList.find(x=>x.field===sel.value);
+      if(info&&f){info.classList.remove('hidden');info.innerHTML=`<span class="muted">الإجراء المقترح: ${esc(f.action)}</span>`}
+    };
+    if(sel.options.length)sel.onchange();
+  }catch(e){sel.innerHTML='<option value="">تعذر تحميل العوامل</option>';console.error(e)}
+}
 async function runModel3(){
   const box=document.getElementById('m3Result');box.classList.remove('hidden');box.innerHTML='<span class="ai-loading">جاري مقارنة قبل وبعد التدخل...</span>';
   try{
-    const d=await api('/what-if',{method:'POST',body:JSON.stringify({road_name:m3Road.value,factor:m3Factor.value,improvement_pct:Number(m3Pct.value)})});
+    if(!m3Road.value||!m3Factor.value) throw Error('اختاري الطريق والتدخل المقترح أولاً.');
+    const d=await api('/what-if',{method:'POST',body:JSON.stringify({road_name:m3Road.value,factor:m3Factor.value})});
     const before=Number(d.original_risk_score||0),after=Number(d.estimated_new_risk_score||0),reduction=before?((before-after)/before*100):0;
-    box.innerHTML=`<b>BEFORE: ${before.toFixed(1)}/100</b><br><b>AFTER: ${after.toFixed(1)}/100</b><br><strong style="color:var(--green)">Risk Reduction: ${reduction.toFixed(1)}%</strong>`;
+    box.innerHTML=`<b>قبل التدخل: ${before.toFixed(1)}/100</b> <span class="muted">(${esc(d.original_risk_level||'')})</span><br><b>بعد التدخل: ${after.toFixed(1)}/100</b> <span class="muted">(${esc(d.new_risk_level||'')})</span><br><strong style="color:var(--green)">انخفاض الخطورة: ${reduction.toFixed(1)}%</strong>`;
   }catch(e){box.innerHTML='<span class="danger">تعذر تشغيل Model 3: '+esc(e.message)+'</span>'}
 }
 function populateThreeModels(){
@@ -257,5 +273,5 @@ function populateThreeModels(){
 }
 
 async function askAIAssistant(){const q=document.getElementById('aiQuestion').value.trim(),box=document.getElementById('aiAnswer');if(!q){box.classList.remove('hidden');box.innerHTML='<span class="danger">اكتبي سؤالك أولًا.</span>';return}box.classList.remove('hidden');box.innerHTML='<span class="ai-loading">جاري تحليل البيانات والرد...</span>';try{const d=await api('/ai-assistant',{method:'POST',body:JSON.stringify({question:q})});box.innerHTML=d.success?(d.answer||'لم تصل إجابة من المساعد.'):'<span class="danger">تعذر الحصول على إجابة.</span>'}catch(e){box.innerHTML='<span class="danger">تعذر الاتصال بمساعد الذكاء الاصطناعي: '+e.message+'</span>'}}
-function setTheme(){const light=localStorage.getItem('roadwise_theme')==='light';document.documentElement.classList.toggle('light',light);themeBtn.innerText=light?'☾':'☼'}themeBtn.onclick=()=>{localStorage.setItem('roadwise_theme',document.documentElement.classList.contains('light')?'dark':'light');setTheme()};setTheme();updateUser();loadJourneyOptions();populateThreeModels();
+function setTheme(){const light=localStorage.getItem('roadwise_theme')==='light';document.documentElement.classList.toggle('light',light);themeBtn.innerText=light?'☾':'☼'}themeBtn.onclick=()=>{localStorage.setItem('roadwise_theme',document.documentElement.classList.contains('light')?'dark':'light');setTheme()};setTheme();updateUser();loadJourneyOptions();populateThreeModels();loadControllableFactors();
 </script></body></html>

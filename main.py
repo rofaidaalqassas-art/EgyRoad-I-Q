@@ -155,7 +155,6 @@ class PredictBody(BaseModel):
 class WhatIfBody(BaseModel):
     road_name: str
     factor: str
-    improvement_pct: float
 
 
 class ScenarioBody(BaseModel):
@@ -476,6 +475,34 @@ class JourneyRequest(BaseModel):
     weather: str = "Clear"
 
 
+# القيم اللي واجهة المستخدم بتبعتها (Clear/Rain/Fog/Dust) مش نفسها بالحرف
+# القيم اللي الموديل اتدرب عليها فعليًا فى عمود Weather_Condition - نفس
+# التحويل المستخدم فى data_prep.py (WEATHER_MAP) عشان نتجنب إرسال قيمة
+# مش متطابقة حرفيًا، واللي الـ OneHotEncoder هيتجاهلها بصمت (handle_
+# unknown="ignore") من غير أي تنبيه ظاهر.
+_WEATHER_TRAINED_MAP = {"Clear": "Clear", "Rain": "Light Rain", "Fog": "Fog", "Dust": "Dusty"}
+
+
+def _ai_predict_road_risk(road_name: str, hour_24: int, weather: str) -> Optional[Dict[str, Any]]:
+    """يبني Scenario واقعي للطريق من متوسطات/أكثر القيم شيوعًا فى حوادث
+    الطريق الفعلية (risk_model.build_average_scenario - كانت موجودة
+    ومبنية بالفعل بس مش متستخدمة فى أي مكان)، يعدّل عليه الساعة والطقس
+    اللي اختارهم المستخدم فعليًا، ثم يمرره لموديل التصنيف الحقيقي
+    (final_injury_classifier_catboost.pkl) عن طريق ai_model.predict().
+
+    أي حقل سائق/مركبة مش متاح من بيانات الطريق نفسها (العمر، الجنس، سنوات
+    الخبرة، الدخل الشهري...إلخ) بيتسيب من غير قيمة عمدًا - ai_model._to_frame
+    بيحوّلها NaN تلقائيًا، والـ Pipeline المحفوظ فى الـ .pkl بيملأها بنفسه
+    (median للأرقام / الأكثر شيوعًا للفئوي). ده سلوك موثّق ومقصود فى
+    الموديل نفسه، مش افتراض بنضيفه إحنا."""
+    scenario = risk_model.build_average_scenario(road_name)
+    if not scenario:
+        return None
+    scenario["Hour_24"] = hour_24
+    scenario["Weather_Condition"] = _WEATHER_TRAINED_MAP.get(weather, weather)
+    return ai_model.predict(scenario)
+
+
 class JourneyOptionsResponse(BaseModel):
     governorates: List[str]
     roads_by_governorate: Dict[str, List[str]]
@@ -506,37 +533,61 @@ def analyze_road_journey(body: JourneyRequest):
     if metrics is None:
         raise HTTPException(status_code=404, detail="الطريق المختار غير موجود داخل بيانات الحوادث لهذه المحافظة.")
 
-    # عامل الوقت/الطقس يأتي من RiskModel، بينما أرقام الطريق نفسها تأتي مباشرة من Excel.
-    try:
-        context = risk_model.predict_trip([metrics["governorate"]], body.hour_24, body.weather)
-        context_score = float(context.get("risk_score", metrics["risk_score"]))
-    except Exception:
-        context_score = metrics["risk_score"]
+    # نحاول الأول نستخدم موديل التصنيف الحقيقي (final_injury_classifier_
+    # catboost.pkl) بدل الصيغة الإحصائية اليدوية القديمة - راجع
+    # _ai_predict_road_risk. لو الموديل مش جاهز أو الطريق معندوش بيانات
+    # كافية لبناء Scenario، نرجع تلقائيًا للمنطق التاريخي القديم بدل ما
+    # نكسر الـ endpoint.
+    ai_result = None
+    if AI_READY:
+        try:
+            ai_result = _ai_predict_road_risk(body.road_name, body.hour_24, body.weather)
+        except Exception:
+            ai_result = None
 
-    # نستخدم بيانات الطريق الفعلية كأساس، مع تعديل صغير فقط إذا كان سياق الوقت/الطقس أعلى.
-    final_score = round(min(100.0, max(metrics["risk_score"], context_score)), 1)
-    if final_score >= 75:
-        level = "مرتفع جدًا"
-    elif final_score >= 55:
-        level = "مرتفع"
-    elif final_score >= 35:
-        level = "متوسط"
+    if ai_result is not None:
+        final_score = ai_result["risk_score_0_100"]
+        level = ai_result["risk_level"]
+        source = "final_injury_classifier_catboost.pkl (نموذج تعلّم آلي حقيقي)"
+        model_used = "ai_classifier"
+        injury_probability = ai_result["injury_probability"]
     else:
-        level = "منخفض"
+        # نفس المنطق التاريخي القديم بالظبط - fallback آمن.
+        try:
+            context = risk_model.predict_trip([metrics["governorate"]], body.hour_24, body.weather)
+            context_score = float(context.get("risk_score", metrics["risk_score"]))
+        except Exception:
+            context_score = metrics["risk_score"]
+        final_score = round(min(100.0, max(metrics["risk_score"], context_score)), 1)
+        if final_score >= 75:
+            level = "مرتفع جدًا"
+        elif final_score >= 55:
+            level = "مرتفع"
+        elif final_score >= 35:
+            level = "متوسط"
+        else:
+            level = "منخفض"
+        source = "accidents_data.xlsx / Accidents (مؤشر تاريخي - نموذج التصنيف غير متاح حاليًا)"
+        model_used = "historical_index"
+        injury_probability = None
 
-    return {
+    result = {
         **metrics,
         "risk_score": final_score,
         "risk_level": level,
         "hour_24": body.hour_24,
         "weather": body.weather,
-        "source": "accidents_data.xlsx / Accidents",
+        "source": source,
+        "model_used": model_used,
         "recommendation": (
             "الطريق مرتفع الخطورة وفق نتائج الحوادث المسجلة؛ يفضّل خفض السرعة وتجنب الظروف الجوية السيئة."
             if final_score >= 55
             else "مستوى الخطورة أقل وفق بيانات الحوادث المسجلة، مع الالتزام بالسرعة الآمنة وتعليمات المرور."
         ),
     }
+    if injury_probability is not None:
+        result["injury_probability"] = injury_probability
+    return result
 
 
 @app.post("/best-route")
@@ -595,23 +646,50 @@ def what_if(
     body: WhatIfBody,
     user=Depends(get_current_user)
 ):
+    """محاكاة سيناريو تحسين حقيقية: بتبني متوسط سيناريو الطريق (زي Model 1
+    بالظبط - risk_model.build_average_scenario)، وتحسب احتمالية الإصابة
+    قبل/بعد تغيير عامل واحد قابل للتحكم (زي الإضاءة أو حالة الرصف) لقيمته
+    الآمنة، باستخدام موديل التصنيف الحقيقي عن طريق ai_model.what_if()
+    (كانت موجودة ومبنية بالفعل، بس مربوطة بس بـ /ai/what-if اللي الواجهة
+    ماكانتش بتستخدمه). لاحظي إن مفيش "نسبة تحسين %" هنا زي القديم - العامل
+    فئوي (زي حالة الرصف) مش نسبة مئوية، فمفيش معنى حقيقي لسحّاب %.
+    """
     if user["role"] not in ("decision", "admin"):
         raise HTTPException(
             status_code=403,
             detail="مسموح فقط لحسابات متخذي القرار"
         )
 
-    try:
-        return risk_model.what_if(
-            body.road_name,
-            body.factor,
-            body.improvement_pct
+    model = require_ai()
+
+    if body.factor not in CONTROLLABLE_FACTORS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"عامل غير معروف: {body.factor}"
         )
-    except KeyError as e:
+
+    scenario = risk_model.build_average_scenario(body.road_name)
+    if not scenario:
         raise HTTPException(
             status_code=404,
-            detail=str(e)
+            detail="لا توجد بيانات كافية عن هذا الطريق لبناء سيناريو."
         )
+
+    meta = CONTROLLABLE_FACTORS[body.factor]
+    result = model.what_if(scenario, {body.factor: meta["safe_value"]})
+
+    return {
+        "road_name": body.road_name,
+        "factor": body.factor,
+        "factor_label": meta["label"],
+        "action": meta["action"],
+        "original_risk_score": round(result["original"]["injury_probability"] * 100, 1),
+        "estimated_new_risk_score": round(result["after_changes"]["injury_probability"] * 100, 1),
+        "original_risk_level": result["original"]["risk_level"],
+        "new_risk_level": result["after_changes"]["risk_level"],
+        "improvement_points": result["improvement_points"],
+        "source": "final_injury_classifier_catboost.pkl (نموذج تعلّم آلي حقيقي)",
+    }
 
 
 @app.get("/dashboard-stats")
