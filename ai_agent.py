@@ -46,9 +46,21 @@ class RoadwiseCache:
 
 
 def load_roadwise_cache(data_file: str = DATA_FILE) -> RoadwiseCache:
-    """يتحمّل مرة واحدة بس عند تشغيل السيرفر - مش مع كل سؤال."""
+    """يتحمّل مرة واحدة بس عند تشغيل السيرفر - مش مع كل سؤال.
 
-    df = pd.read_excel(data_file)
+    مهم: بنقرأ الأعمدة المطلوبة بس (usecols) بدل الملف كامل بكل أعمدته،
+    وبعد حساب الملخصات (kpi_summary/cause_counts) بنسيب فى cache.df بس
+    الأعمدة اللي فعلاً بتتفلتر بيها لاحقًا (Governorate_EN/Highway_Name/
+    Fatalities_Count/Injuries_Count فى build_relevant_slice). الكاش ده
+    بيفضل محفوظ فى الذاكرة طول عمر السيرفر (بيتحمّل مرة عند startup فى
+    main.py)، فكل عمود زيادة فيه بيتضاعف تأثيره - وده كان بيساهم فى تخطي
+    حد الذاكرة على Render حتى لو محدش سأل الـ AI أصلاً."""
+
+    needed_cols = (
+        "Governorate_EN", "Highway_Name", "Cause_Category",
+        "Fatalities_Count", "Injuries_Count", "Total_Economic_Loss_EGP",
+    )
+    df = pd.read_excel(data_file, usecols=lambda c: c in needed_cols)
 
     governorate_counts = df["Governorate_EN"].value_counts()
     road_counts = df["Highway_Name"].value_counts()
@@ -58,6 +70,12 @@ def load_roadwise_cache(data_file: str = DATA_FILE) -> RoadwiseCache:
     total_fatalities = int(df["Fatalities_Count"].sum())
     total_injuries = int(df["Injuries_Count"].sum())
     total_economic_loss = float(df["Total_Economic_Loss_EGP"].sum())
+
+    # مش محتاجين نسيب Cause_Category/Total_Economic_Loss_EGP فى الـ df
+    # المحفوظ - استخدامهم كان لحظة التحميل بس (فوق) لحساب cause_counts
+    # والملخص. build_relevant_slice() بعد كده بيستخدم بس الأعمدة الأربعة
+    # الباقية.
+    df = df[["Governorate_EN", "Highway_Name", "Fatalities_Count", "Injuries_Count"]]
 
     kpi_summary = (
         "ROADWISE KPI SUMMARY\n"
