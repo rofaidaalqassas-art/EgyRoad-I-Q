@@ -911,8 +911,20 @@ def health():
 # قراءة ملف الإكسيل وربطه بالواجهات
 # ----------------------------------------------------
 
+_EXCEL_DATA_CACHE = None  # نتيجة get_excel_data() مكاشة - راجع التعليق تحت
+
+
 def get_excel_data():
-    """Load the accident records and enrich them with location attributes."""
+    """Load the accident records and enrich them with location attributes.
+
+    مكاش فى الذاكرة (زي _load_journey_df بالظبط) بدل ما يعيد قراءة/دمج
+    ملف accidents_data.xlsx (~40 ألف صف) وتحويله لـ JSON فى كل طلب. القراءة
+    والتحويل دول كانوا بيتكرروا مع كل GET /api/data، وده اللي كان بيسبب
+    تخطي حد الذاكرة (Memory limit) على Render وإعادة تشغيل الخدمة."""
+
+    global _EXCEL_DATA_CACHE
+    if _EXCEL_DATA_CACHE is not None:
+        return _EXCEL_DATA_CACHE
 
     try:
         base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -970,11 +982,12 @@ def get_excel_data():
             orient="records"
         )
 
-        return {
+        _EXCEL_DATA_CACHE = {
             "count": len(records),
             "columns": df.columns.tolist(),
             "data": records
         }
+        return _EXCEL_DATA_CACHE
 
     except Exception as e:
         raise HTTPException(
