@@ -464,6 +464,14 @@ def _call_vision_model_with_retry(
             )
 
 
+    # نطبع سبب الفشل النهائي فى الـ logs (Render → Logs) عشان نعرف بالظبط
+    # ليه كل المحاولات فشلت - استثناء API؟ مفتاح غير صحيح؟ Timeout؟ - بدل
+    # ما نعرف بس إنها فشلت من غير أي تفاصيل.
+    print(
+        f"[WARN] image verification: all {total_attempts} attempts failed. "
+        f"last_error={last_error!r}"
+    )
+
     return (
         None,
         last_error,
