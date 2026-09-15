@@ -176,6 +176,12 @@ class ImpactBody(BaseModel):
     vehicle_type: Optional[str] = None
     speed: Optional[float] = None
     vehicles_involved: Optional[int] = None
+    # الحد الأقصى المسموح به - من غيره، Speed_Over_Limit_KMH وSpeed_Ratio
+    # (المشتقّان من الفرق بين السرعة والحد المسموح) كانوا بيفضلوا فاضيين
+    # دايمًا (راجع _add_impact_derived_features)، وده كان بيخلي الموديل
+    # شبه مش حساس لتغيير السرعة - لأن أهم فيتشرين مرتبطين بالسرعة
+    # كانوا أصلًا مش بيوصلوله.
+    posted_speed_limit: Optional[float] = None
     # اختياري: لو الواجهة بعتت كمان أي فيتشرز تانية من IMPACT_FEATURES
     # (زي المحافظة/الإضاءة/حالة الطريق من فورم "تقييم عوامل الخطر")، بتتمرر
     # زي ما هي وتنضم لباقي السيناريو.
@@ -954,6 +960,8 @@ def predict_impact(body: ImpactBody):
         scenario["Impact_Speed_KMH"] = body.speed
     if body.vehicles_involved is not None:
         scenario["Vehicles_Involved"] = body.vehicles_involved
+    if body.posted_speed_limit is not None:
+        scenario["Posted_Speed_Limit_KMH"] = body.posted_speed_limit
 
     result = model.predict_impact(scenario)
 

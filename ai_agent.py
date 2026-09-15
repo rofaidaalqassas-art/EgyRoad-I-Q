@@ -12,6 +12,40 @@ from google import genai
 
 DATA_FILE = "accidents_data.xlsx"
 
+# خريطة أسماء المحافظات عربي -> إنجليزي (Governorate_EN فى البيانات) -
+# ثابتة لأن محافظات مصر الـ27 معروفة ومستقرة. من غيرها، _find_mentioned_
+# governorate كان بيدوّر على الاسم الإنجليزي ("Cairo") جوه سؤال مكتوب
+# بالعربي ("عدد الحوادث فى القاهرة")، فمستحيل يتطابق أبدًا.
+GOVERNORATE_AR_TO_EN = {
+    "الإسكندرية": "Alexandria", "اسكندرية": "Alexandria",
+    "أسوان": "Aswan", "اسوان": "Aswan",
+    "أسيوط": "Asyut", "اسيوط": "Asyut",
+    "البحيرة": "Beheira",
+    "بني سويف": "Beni Suef",
+    "القاهرة": "Cairo",
+    "الدقهلية": "Dakahlia",
+    "دمياط": "Damietta",
+    "الفيوم": "Faiyum",
+    "الغربية": "Gharbiya",
+    "الجيزة": "Giza",
+    "الإسماعيلية": "Ismailia", "الاسماعيلية": "Ismailia",
+    "كفر الشيخ": "Kafr El Sheikh",
+    "الأقصر": "Luxor", "الاقصر": "Luxor",
+    "مطروح": "Matrouh",
+    "المنوفية": "Menoufia",
+    "المنيا": "Minya",
+    "الوادي الجديد": "New Valley",
+    "شمال سيناء": "North Sinai",
+    "بورسعيد": "Port Said", "بور سعيد": "Port Said",
+    "القليوبية": "Qalyubia",
+    "قنا": "Qena",
+    "البحر الأحمر": "Red Sea",
+    "الشرقية": "Sharkia",
+    "سوهاج": "Sohag",
+    "جنوب سيناء": "South Sinai",
+    "السويس": "Suez",
+}
+
 # إعدادات التحقق (Verification) لإجابات متخذ القرار:
 #   - MAX_RETRIES/RETRY_DELAY_SECONDS: إعادة محاولة عند بطء/فشل مؤقت في
 #     الاتصال بالموديل، بدل ما السؤال يفشل تمامًا من أول عثرة.
@@ -129,6 +163,18 @@ _PRECOMPUTED_PATTERNS = [
 
 
 def _match_precomputed(question: str, cache: RoadwiseCache) -> Optional[str]:
+    """الإجابات الجاهزة (precomputed_answers) كلها أرقام إجمالية عامة
+    (مصر كلها)، مش لمحافظة أو طريق معيّن. لو السؤال فيه اسم محافظة أو
+    طريق مذكور صراحة (زي "عدد الحوادث فى القاهرة")، لازم نتخطى الإجابة
+    الجاهزة العامة ونسيب السؤال يروح لـ build_relevant_slice + Gemini،
+    اللي فعليًا بيفلتر على المحافظة/الطريق المذكورة. قبل الإصلاح ده، أي
+    سؤال فيه كلمة "عدد الحوادث" كان بيرجّع إجمالي مصر كله حتى لو
+    المحافظة مذكورة صريح فى نفس الجملة.
+    """
+    if _find_mentioned_governorate(question, cache) is not None:
+        return None
+    if _find_mentioned_road(question, cache) is not None:
+        return None
     for keywords, key in _PRECOMPUTED_PATTERNS:
         if any(kw in question for kw in keywords):
             return cache.precomputed_answers.get(key)
@@ -136,6 +182,11 @@ def _match_precomputed(question: str, cache: RoadwiseCache) -> Optional[str]:
 
 
 def _find_mentioned_governorate(question: str, cache: RoadwiseCache) -> Optional[str]:
+    # الأول ندوّر بالاسم العربي (الأكثر شيوعًا فى أسئلة المستخدمين الفعلية)
+    for name_ar, name_en in GOVERNORATE_AR_TO_EN.items():
+        if name_ar in question and name_en in cache.governorate_counts.index:
+            return name_en
+    # وبعدين بالاسم الإنجليزي زي ما كان (لو حد كتبه إنجليزي فعلاً)
     for governorate in cache.governorate_counts.index:
         if str(governorate) and str(governorate) in question:
             return governorate
@@ -212,6 +263,14 @@ def _call_gemini_with_retry(prompt: str):
 
         if attempt <= MAX_RETRIES:
             time.sleep(RETRY_DELAY_SECONDS * attempt)
+
+    # نطبع سبب الفشل النهائي فى الـ logs (Render → Logs) عشان نعرف بالظبط
+    # ليه مساعد Gemini فشل - نفس الثغرة اللي كانت فى image_verification.py:
+    # last_error كان بيتسجل بس مايتطبعش، فمفيش أي أثر نشوفه وقت الفشل.
+    print(
+        f"[WARN] ai_agent: Gemini call failed after retries. "
+        f"last_error={last_error!r}"
+    )
 
     return None, last_error
 

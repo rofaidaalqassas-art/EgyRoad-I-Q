@@ -57,6 +57,7 @@ main{padding:45px 0 80px}.section-head{display:flex;justify-content:space-betwee
 <div class="field"><label>نوع المركبة</label><select id="m2Vehicle"><option>Car</option><option>Truck</option><option>Bus</option><option>Motorcycle</option><option>Other</option></select></div></div>
 <div class="split"><div class="field"><label>السرعة km/h</label><input id="m2Speed" min="0" type="number" value="80"/></div>
 <div class="field"><label>عدد المركبات</label><input id="m2Vehicles" min="1" type="number" value="2"/></div></div>
+<div class="field"><label>الحد الأقصى المسموح به km/h</label><input id="m2SpeedLimit" min="0" type="number" value="90"/></div>
 <button class="btn soft" onclick="runModel2()">Predict Impact</button>
 <div class="result hidden" id="m2Result"></div>
 </div>
@@ -195,7 +196,7 @@ async function runModel1(){
 async function runModel2(){
   const box=document.getElementById('m2Result');box.classList.remove('hidden');box.innerHTML='<span class="ai-loading">جاري تقدير التأثير...</span>';
   try{
-    const d=await api('/predict-impact',{method:'POST',body:JSON.stringify({collision_type:m2Collision.value,vehicle_type:m2Vehicle.value,speed:Number(m2Speed.value),vehicles_involved:Number(m2Vehicles.value),extra:{}})});
+    const d=await api('/predict-impact',{method:'POST',body:JSON.stringify({collision_type:m2Collision.value,vehicle_type:m2Vehicle.value,speed:Number(m2Speed.value),vehicles_involved:Number(m2Vehicles.value),posted_speed_limit:Number(m2SpeedLimit.value),extra:{}})});
     box.innerHTML=`<b>Impact Score: ${Number(d.impact_score||0).toFixed(0)}/100</b><br>مستوى التأثير: <strong>${esc(d.impact_level||'—')}</strong><br>الإصابات المتوقعة: ${Number(d.predicted_injuries||0).toFixed(0)}<br>الوفيات المتوقعة: ${Number(d.predicted_fatalities||0).toFixed(0)}<br><span class="muted">${esc(d.recommendation||'')}</span>`;
   }catch(e){box.innerHTML='<span class="danger">تعذر تشغيل Model 2: '+esc(e.message)+'</span>'}
 }
@@ -237,7 +238,10 @@ async function runModel3(){
     if(!m3Road.value||!m3Factor.value) throw Error('اختاري الطريق والتدخل المقترح أولاً.');
     const d=await api('/what-if',{method:'POST',body:JSON.stringify({road_name:m3Road.value,factor:m3Factor.value})});
     const before=Number(d.original_risk_score||0),after=Number(d.estimated_new_risk_score||0),reduction=before?((before-after)/before*100):0;
-    box.innerHTML=`<b>قبل التدخل: ${before.toFixed(1)}/100</b> <span class="muted">(${esc(d.original_risk_level||'')})</span><br><b>بعد التدخل: ${after.toFixed(1)}/100</b> <span class="muted">(${esc(d.new_risk_level||'')})</span><br><strong style="color:var(--green)">انخفاض الخطورة: ${reduction.toFixed(1)}%</strong>`;
+    const isImprovement=reduction>0.05,isWorse=reduction<-0.05;
+    const deltaLabel=isImprovement?`انخفاض الخطورة: ${reduction.toFixed(1)}%`:isWorse?`زيادة في الخطورة: ${Math.abs(reduction).toFixed(1)}%`:`لا يوجد فرق ملحوظ (${reduction.toFixed(1)}%)`;
+    const deltaColor=isImprovement?'var(--green)':isWorse?'var(--red)':'var(--muted)';
+    box.innerHTML=`<b>قبل التدخل: ${before.toFixed(1)}/100</b> <span class="muted">(${esc(d.original_risk_level||'')})</span><br><b>بعد التدخل: ${after.toFixed(1)}/100</b> <span class="muted">(${esc(d.new_risk_level||'')})</span><br><strong style="color:${deltaColor}">${deltaLabel}</strong>${isWorse?`<br><span class="muted" style="font-size:.8rem">الموديل بيعكس ارتباط تاريخي فى البيانات، مش بالضرورة علاقة سببية مباشرة - خصوصًا لما الفرق صغير.</span>`:''}`;
   }catch(e){box.innerHTML='<span class="danger">تعذر تشغيل Model 3: '+esc(e.message)+'</span>'}
 }
 function populateThreeModels(){
