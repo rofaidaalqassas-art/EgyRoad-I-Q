@@ -968,12 +968,6 @@ def get_excel_data():
             suffixes=("", "_location")
         )
 
-        # تحويل القيم إلى قيم آمنة للـ JSON
-        df = df.where(
-            pd.notna(df),
-            None
-        )
-
         for col in df.columns:
             if pd.api.types.is_datetime64_any_dtype(df[col]):
                 df[col] = df[col].astype(str)
@@ -981,6 +975,17 @@ def get_excel_data():
         records = df.to_dict(
             orient="records"
         )
+
+        # تحويل القيم الفاضية (NaN/NaT) إلى None بعد التحويل لـ dict مباشرة،
+        # بفحص كل قيمة لوحدها بـ pd.isna() - أضمن من df.where(pd.notna(df),
+        # None) اللي كان بيسيب بعض قيم NaN من غير استبدال فى بعض الأعمدة
+        # (زي Black_Spot_Name القادم من عمود location الفاضي للصفوف اللي
+        # معندهاش موقع مطابق فى الـ merge)، وده كان يسبب:
+        #   ValueError: Out of range float values are not JSON compliant: nan
+        records = [
+            {k: (None if pd.isna(v) else v) for k, v in row.items()}
+            for row in records
+        ]
 
         _EXCEL_DATA_CACHE = {
             "count": len(records),
