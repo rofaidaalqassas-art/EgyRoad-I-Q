@@ -133,12 +133,11 @@ _FRONTEND_CANDIDATES = [
 print("[START] Loading EgyRoad IQ backend...")
 
 
-try:
-    risk_model = RiskModel()
-    print("[OK] RiskModel loaded.")
-except Exception as e:
-    risk_model = None
-    print(f"[ERROR] RiskModel failed: {e}")
+risk_model = None
+ai_model = None
+AI_READY = False
+roadwise_cache = None
+ROADWISE_READY = False
 
 
 users = UserStore(
@@ -156,16 +155,6 @@ incidents = IncidentStore(
 )
 
 security = HTTPBearer(auto_error=False)
-
-
-try:
-    ai_model = AIModel()
-    AI_READY = True
-    print("[OK] AIModel loaded successfully.")
-except Exception as e:
-    ai_model = None
-    AI_READY = False
-    print(f"[WARN] AI model unavailable: {e}")
 
 
 def require_risk_model():
@@ -188,20 +177,6 @@ def require_ai():
     return ai_model
 
 
-# ============================================================
-# ROADWISE CACHE
-# ============================================================
-
-try:
-    roadwise_cache = load_roadwise_cache()
-    ROADWISE_READY = True
-    print("[OK] ROADWISE cache loaded.")
-except Exception as e:
-    roadwise_cache = None
-    ROADWISE_READY = False
-    print(f"[WARN] ROADWISE cache failed: {e}")
-
-
 def require_roadwise():
     if not ROADWISE_READY:
         raise HTTPException(
@@ -210,6 +185,63 @@ def require_roadwise():
         )
 
     return roadwise_cache
+
+
+# ============================================================
+# STARTUP EVENT
+# ============================================================
+# التحميل التقيل كله (RiskModel/AIModel/roadwise_cache + قراءات
+# accidents_data.xlsx التمهيدية) كان قبل كده بيحصل وقت استيراد الملف نفسه
+# (module import) - يعني قبل ما uvicorn يقدر يفتح البورت أصلًا. وده كان
+# سبب "Port scan timeout" ودقايق الانتظار الطويلة (حصل قبل كده لحد 19
+# دقيقة) وقت ما الموقع "يصحى من النوم" بعد فترة خمول على Render Free.
+#
+# نقل التحميل هنا (FastAPI startup event) بيخلي uvicorn يفتح البورت فورًا
+# بعد الـ import السريع، ثم يشغّل التحميل التقيل فى الخلفية بعد كده. أي
+# طلب يوصل أثناء التحميل لسه شغال هياخد رسالة 503 واضحة بدل ما السيرفر
+# كله يفضل معلّق من غير رد. لو اترجع الكود ده لوضعه القديم (تحميل مباشر
+# فى مستوى الملف) هترجع مشكلة الـ Deploy البطيء اللي استغرقنا وقت طويل
+# نشخصها ونصلحها.
+# ============================================================
+
+@app.on_event("startup")
+def _load_heavy_dependencies():
+    global risk_model, ai_model, AI_READY, roadwise_cache, ROADWISE_READY
+
+    try:
+        risk_model = RiskModel()
+        print("[OK] RiskModel loaded.")
+    except Exception as e:
+        risk_model = None
+        print(f"[ERROR] RiskModel failed: {e}")
+
+    try:
+        ai_model = AIModel()
+        AI_READY = True
+        print("[OK] AIModel loaded successfully.")
+    except Exception as e:
+        ai_model = None
+        AI_READY = False
+        print(f"[WARN] AI model unavailable: {e}")
+
+    try:
+        roadwise_cache = load_roadwise_cache()
+        ROADWISE_READY = True
+        print("[OK] ROADWISE cache loaded.")
+    except Exception as e:
+        roadwise_cache = None
+        ROADWISE_READY = False
+        print(f"[WARN] ROADWISE cache failed: {e}")
+
+    try:
+        _load_journey_df()
+    except Exception as e:
+        print(f"[WARN] Journey cache failed: {e}")
+
+    try:
+        get_excel_data()
+    except Exception as e:
+        print(f"[WARN] /api/data cache failed: {e}")
 
 
 # ============================================================
@@ -846,14 +878,6 @@ def _road_metrics(
     cache = _build_journey_metrics_cache()
 
     return cache.get(key)
-
-
-try:
-    _load_journey_df()
-except Exception as e:
-    print(
-        f"[WARN] Journey cache failed: {e}"
-    )
 
 
 # ============================================================
@@ -3043,14 +3067,6 @@ def get_excel_data():
 def read_data():
 
     return get_excel_data()
-
-
-try:
-    get_excel_data()
-except Exception as e:
-    print(
-        f"[WARN] /api/data cache failed: {e}"
-    )
 
 
 # ============================================================

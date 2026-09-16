@@ -317,7 +317,11 @@ def _call_vision_model_once(
         ],
         config=types.GenerateContentConfig(
             temperature=0,
-            max_output_tokens=256,
+            # كان 256 قبل كده - قليل جدًا لموديل بيرجّع تفكير/تمهيد قبل
+            # الـ JSON النهائي، فكان بيقطع الرد ناقص قبل ما يكمل الـ JSON
+            # (وده سبب "رد موديل فحص الصور لم يكن بصيغة JSON صالحة" اللي
+            # كان بيظهر مع كل صورة تقريبًا - رد موجود لكن مقطوع).
+            max_output_tokens=1024,
         ),
     )
 

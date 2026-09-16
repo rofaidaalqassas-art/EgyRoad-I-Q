@@ -121,6 +121,11 @@ def load_roadwise_cache(
     road_counts = df["Highway_Name"].value_counts()
     cause_counts = df["Cause_Category"].value_counts()
 
+    # كل صف في شيت Accidents هو حادثة واحدة - نفس المنطق اللي باقي
+    # المشروع كله (data_prep.py, /api/data, لوحة القيادة) بيعتمد عليه.
+    # لازم نحسبه هنا قبل ما نقص df للأعمدة الأربعة بس تحت.
+    total_accidents = len(df)
+
     total_fatalities = int(
         pd.to_numeric(
             df["Fatalities_Count"],
@@ -152,14 +157,12 @@ def load_roadwise_cache(
         ]
     ]
 
-    # =====================================================
-    # مهم:
-    # لا يوجد Total_Accidents موثوق كحقل مستقل في البيانات.
-    # لذلك لا نعرض len(df) على أنه إجمالي الحوادث الرسمي.
-    # =====================================================
+    # كل صف فى شيت Accidents هو حادثة واحدة بالفعل - محسوبة فوق قبل ما
+    # نقص df، فـ "عدد الحوادث" رقم موثوق ومتّسق مع باقي المشروع كله.
 
     kpi_summary = (
         "ROADWISE KPI SUMMARY\n"
+        f"Total Accidents: {total_accidents}\n"
         f"Total Fatalities: {total_fatalities}\n"
         f"Total Injuries: {total_injuries}\n"
         f"Total Economic Loss: {total_economic_loss} EGP\n"
@@ -179,20 +182,25 @@ def load_roadwise_cache(
 
     precomputed_answers = {
         "most_dangerous_governorate": (
-            f"أكثر محافظة من حيث عدد السجلات في البيانات هي "
+            f"أكثر محافظة من حيث عدد الحوادث هي "
             f"{most_dangerous_gov} بعدد "
-            f"{int(governorate_counts.iloc[0])} سجل."
+            f"{int(governorate_counts.iloc[0])} حادثة."
         )
         if most_dangerous_gov is not None
         else "البيانات غير كافية لتحديد المحافظة الأعلى.",
 
         "most_dangerous_road": (
-            f"أكثر طريق من حيث عدد السجلات في البيانات هو "
+            f"أكثر طريق من حيث عدد الحوادث هو "
             f"{most_dangerous_road} بعدد "
-            f"{int(road_counts.iloc[0])} سجل."
+            f"{int(road_counts.iloc[0])} حادثة."
         )
         if most_dangerous_road is not None
         else "البيانات غير كافية لتحديد الطريق الأعلى.",
+
+        "total_accidents": (
+            f"إجمالي عدد الحوادث المسجلة هو "
+            f"{total_accidents} حادثة."
+        ),
 
         "total_fatalities": (
             f"إجمالي عدد الوفيات المسجلة هو "
@@ -260,6 +268,15 @@ _PRECOMPUTED_PATTERNS = [
             "إجمالي الإصابات",
         ),
         "total_injuries",
+    ),
+    (
+        (
+            "عدد الحوادث",
+            "اجمالي الحوادث",
+            "إجمالي الحوادث",
+            "كام حادثة",
+        ),
+        "total_accidents",
     ),
     (
         (
@@ -384,7 +401,7 @@ def build_relevant_slice(
 
         parts.append(
             f"\nGovernorate '{governorate}' detail:\n"
-            f"Records: {len(gov_df)}\n"
+            f"Accidents: {len(gov_df)}\n"
             f"Fatalities: "
             f"{int(pd.to_numeric(gov_df['Fatalities_Count'], errors='coerce').fillna(0).sum())}\n"
             f"Injuries: "
@@ -405,7 +422,7 @@ def build_relevant_slice(
 
         parts.append(
             f"\nRoad '{road}' detail:\n"
-            f"Records: {len(road_df)}\n"
+            f"Accidents: {len(road_df)}\n"
             f"Fatalities: "
             f"{int(pd.to_numeric(road_df['Fatalities_Count'], errors='coerce').fillna(0).sum())}\n"
             f"Injuries: "
@@ -634,6 +651,7 @@ Answer in clear Arabic.
         return (
             "تعذر الحصول على إجابة من موديل "
             "ROADWISE AI حاليًا، برجاء إعادة المحاولة لاحقًا."
+            f"\n(تفاصيل الخطأ: {error})"
         )
 
     # -----------------------------------------------------
